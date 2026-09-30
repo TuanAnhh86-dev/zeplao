@@ -1,0 +1,12 @@
+{
+    "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
+    "ignoreRegExpList": [
+        "/(?<![\\p{L}])[\\p{L}]*[\\u00C0-\\u024F\\u1E00-\\u1EFF][\\p{L}]*(?![\\p{L}])/gu"
+    ],
+    "words": [
+        "dalat",
+        "gian",
+        "Minh",
+        "Tixtak"
+    ]
+}

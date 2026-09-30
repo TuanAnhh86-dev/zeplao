@@ -21,12 +21,20 @@ class AuthController extends Controller
 
     public function authenticate(Request $request): RedirectResponse
     {
+        $guard = Auth::guard('web');
+
+        // Always start a login attempt as a guest, even if an older browser
+        // session is still authenticated or contains a stale intended URL.
+        $guard->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
         $credentials = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
         ]);
 
-        if (! Auth::attempt($credentials, $request->boolean('remember'))) {
+        if (! $guard->attempt($credentials, $request->boolean('remember'))) {
             return back()
                 ->withErrors(['email' => 'Email hoặc mật khẩu không đúng.'])
                 ->onlyInput('email');
@@ -34,7 +42,7 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended('/');
+        return redirect()->route('dashboard');
     }
 
     public function forgotPassword(Request $request): View

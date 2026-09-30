@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 625" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1000" y2="625" gradientUnits="userSpaceOnUse"><stop stop-color="#16072b"/><stop offset=".55" stop-color="#5420a8"/><stop offset="1" stop-color="#17112c"/></linearGradient>
+    <radialGradient id="orb"><stop stop-color="#f5d0fe"/><stop offset=".42" stop-color="#a855f7"/><stop offset="1" stop-color="#7e22ce" stop-opacity="0"/></radialGradient>
+  </defs>
+  <path fill="url(#bg)" d="M0 0h1000v625H0z"/>
+  <circle cx="730" cy="278" r="270" fill="url(#orb)"/>
+  <circle cx="730" cy="278" r="164" stroke="#f0abfc" stroke-opacity=".7" stroke-width="3"/>
+  <circle cx="730" cy="278" r="205" stroke="#fff" stroke-opacity=".3" stroke-width="2" stroke-dasharray="5 13"/>
+  <path d="m0 453 160-138 126 113 175-209 160 193 120-98 259 166v145H0V453Z" fill="#0b0714" fill-opacity=".88"/>
+  <path d="M0 522c163-51 269 10 429-18 174-31 294-57 571 7v114H0V522Z" fill="#09090b"/>
+  <g fill="#e9d5ff"><circle cx="188" cy="456" r="15"/><path d="M168 476h40l16 94h-72l16-94Zm-32 67h20v61h-20zm85 0h20v61h-20z"/><circle cx="355" cy="474" r="13"/><path d="M337 491h36l15 81h-66l15-81Zm-30 59h18v54h-18zm78 0h18v54h-18z"/></g>
+  <text x="52" y="86" fill="#e9d5ff" font-family="Arial,sans-serif" font-size="24" font-weight="700" letter-spacing="7">ONE NIGHT · ONE SOUND</text>
+  <text x="52" y="160" fill="#fff" font-family="Arial,sans-serif" font-size="66" font-weight="900">SOUNDWAVE</text>
+  <text x="57" y="207" fill="#f0abfc" font-family="Arial,sans-serif" font-size="28" font-weight="700" letter-spacing="8">FESTIVAL 2026</text>
+</svg>

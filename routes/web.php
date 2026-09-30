@@ -1,18 +1,29 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Models\Event;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return auth()->check() ? redirect()->route('dashboard') : redirect()->route('login');
+    return Auth::check() ? redirect()->route('dashboard') : redirect()->route('login');
 });
 
-Route::view('/dashboard', 'home')->middleware('auth')->name('dashboard');
+Route::get('/dashboard', function () {
+    $events = Event::query()
+        ->where('is_published', true)
+        ->where('starts_at', '>=', now())
+        ->with('ticketTypes')
+        ->orderBy('starts_at')
+        ->get();
+
+    return view('home', compact('events'));
+})->middleware('auth')->name('dashboard');
+
+Route::get('/login', [AuthController::class, 'login'])->name('login');
+Route::post('/login', [AuthController::class, 'authenticate'])->name('login.authenticate');
 
 Route::middleware('guest')->group(function () {
-    Route::get('/login', [AuthController::class, 'login'])->name('login');
-    Route::post('/login', [AuthController::class, 'authenticate'])->name('login.authenticate');
-
     Route::get('/register', [AuthController::class, 'register'])->name('register');
     Route::post('/register/send-code', [AuthController::class, 'sendRegistrationCode'])
         ->middleware('throttle:5,1')

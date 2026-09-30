@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 625" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="30" y1="20" x2="970" y2="620" gradientUnits="userSpaceOnUse"><stop stop-color="#09090b"/><stop offset=".52" stop-color="#35106b"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient>
+    <linearGradient id="beam" x1="500" y1="80" x2="500" y2="510" gradientUnits="userSpaceOnUse"><stop stop-color="#c4b5fd" stop-opacity=".75"/><stop offset="1" stop-color="#8b5cf6" stop-opacity="0"/></linearGradient>
+  </defs>
+  <path fill="url(#bg)" d="M0 0h1000v625H0z"/>
+  <circle cx="500" cy="250" r="190" stroke="#c4b5fd" stroke-opacity=".28" stroke-width="2"/>
+  <circle cx="500" cy="250" r="145" stroke="#c4b5fd" stroke-opacity=".4" stroke-width="2"/>
+  <path fill="url(#beam)" d="m280 80 160 300H330L280 80Zm440 0L560 380h110L720 80Z"/>
+  <path d="M0 455c145-65 250-35 370 12s243 34 350-12 194-45 280-7v177H0V455Z" fill="#09090b" fill-opacity=".8"/>
+  <path d="M0 520c170-50 285-25 445 18s335 15 555-38v125H0V520Z" fill="#09090b"/>
+  <g fill="#fff"><circle cx="380" cy="414" r="18"/><path d="M354 438h52l23 102h-98l23-102Zm-45 78h25v85h-25zm116 0h25v85h-25z"/><circle cx="605" cy="422" r="16"/><path d="M581 444h48l20 96h-88l20-96Zm-39 77h23v80h-23zm103 0h23v80h-23z"/></g>
+  <text x="52" y="86" fill="#ddd6fe" font-family="Arial,sans-serif" font-size="24" font-weight="700" letter-spacing="7">TIXTAK PRESENTS</text>
+  <text x="52" y="150" fill="#fff" font-family="Arial,sans-serif" font-size="58" font-weight="800" letter-spacing="1">FIRST LIGHT</text>
+  <text x="55" y="190" fill="#e9d5ff" font-family="Arial,sans-serif" font-size="22" letter-spacing="5">LIVE MUSIC · 2026</text>
+</svg>
