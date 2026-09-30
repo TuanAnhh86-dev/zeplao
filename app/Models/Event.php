@@ -16,6 +16,7 @@ class Event extends Model
         'venue',
         'starts_at',
         'cover_image',
+        'introduction',
         'ticket_url',
         'is_published',
     ];

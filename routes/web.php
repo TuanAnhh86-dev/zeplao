@@ -22,6 +22,14 @@ Route::get('/dashboard', function () {
     return view('home', compact('events', 'featuredEvents'));
 })->middleware('auth')->name('dashboard');
 
+Route::get('/select-ticket/{event:slug}', function (Event $event) {
+    abort_unless($event->is_published, 404);
+
+    $event->load('ticketTypes');
+
+    return view('select-ticket', compact('event'));
+})->middleware('auth')->name('select-ticket');
+
 Route::get('/login', [AuthController::class, 'login'])->name('login');
 Route::post('/login', [AuthController::class, 'authenticate'])->name('login.authenticate');
 
