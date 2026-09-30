@@ -96,10 +96,7 @@
 
         <section id="events" class="pt-7" aria-labelledby="events-heading">
             <div class="mb-5 flex items-center justify-between">
-                <h2 id="events-heading" class="flex items-center gap-2.5 text-xl font-semibold sm:text-2xl">
-                    <svg class="size-5 text-violet-400" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    Sự kiện sắp tới
-                </h2>
+                <h2 id="events-heading" class="text-xl font-semibold sm:text-2xl">  </h2>
                 <span class="text-xs text-neutral-500 sm:text-sm" data-event-count>{{ $events->count() }} sự kiện</span>
             </div>
 
@@ -112,7 +109,6 @@
                     @foreach ($events as $event)
                         @php
                             $categoryLabels = ['music' => 'Nhạc sống', 'festival' => 'Lễ hội', 'theatre' => 'Sân khấu'];
-                            $availableTickets = $event->ticketTypes->sum(fn ($ticketType) => max(0, $ticketType->quantity - $ticketType->sold));
                             $startingPrice = $event->ticketTypes->min('price') ?? 0;
                         @endphp
                         <article
@@ -135,7 +131,9 @@
                                         <p class="text-[11px] font-medium uppercase tracking-wider text-neutral-500">Giá vé từ</p>
                                         <p class="mt-0.5 text-base font-bold text-violet-300">{{ number_format($startingPrice, 0, ',', '.') }}đ</p>
                                     </div>
-                                    <p class="text-right text-xs text-neutral-400"><span class="block font-semibold text-white">{{ number_format($availableTickets, 0, ',', '.') }}</span> vé còn lại</p>
+                                    <a href="" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 rounded-full bg-violet-600 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400" aria-label="Xem vé {{ $event->title }} trên Ticketbox">
+                                        Xem vé <svg class="size-3.5" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7 4h9v9M16 4 8 12M14 11v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    </a>
                                 </div>
                                 <div class="mt-4 space-y-2 text-sm text-neutral-400">
                                     <p class="flex items-center gap-2">
