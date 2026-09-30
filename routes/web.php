@@ -17,7 +17,9 @@ Route::get('/dashboard', function () {
         ->orderBy('starts_at')
         ->get();
 
-    return view('home', compact('events'));
+    $featuredEvents = $events->values();
+
+    return view('home', compact('events', 'featuredEvents'));
 })->middleware('auth')->name('dashboard');
 
 Route::get('/login', [AuthController::class, 'login'])->name('login');

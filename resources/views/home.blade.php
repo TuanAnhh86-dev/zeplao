@@ -82,6 +82,7 @@
                     <option class="bg-neutral-900 text-white" value="music">Nhạc sống</option>
                     <option class="bg-neutral-900 text-white" value="festival">Lễ hội</option>
                     <option class="bg-neutral-900 text-white" value="theatre">Sân khấu</option>
+                    <option class="bg-neutral-900 text-white" value="experience">Trải nghiệm</option>
                 </select>
                 <label class="sr-only" for="city-filter">Thành phố</label>
                 <select id="city-filter" class="h-11 cursor-pointer rounded-xl border border-white/10 bg-neutral-800 px-4 text-sm font-semibold text-white outline-none transition hover:border-violet-400/70 focus:border-violet-400 focus:ring-2 focus:ring-violet-500/20" data-city-filter>
@@ -94,9 +95,44 @@
             </div>
         </div>
 
+        @if ($featuredEvents->isNotEmpty())
+            <section class="-mx-5 mt-8 bg-neutral-900 px-5 py-7 sm:-mx-8 sm:px-8" aria-labelledby="year-end-heading">
+                <div class="mb-5 flex items-center justify-between gap-4">
+                    <div>
+                        <h2 id="year-end-heading" class="text-xl font-semibold sm:text-2xl">Sự kiện sắp diễn ra</h2>
+                        <div class="mt-2 h-1 w-28 rounded-full bg-violet-500"></div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="hidden text-sm text-neutral-400 sm:inline">{{ $featuredEvents->count() }} sự kiện</span>
+                        <button type="button" data-carousel-prev aria-label="Cuộn sự kiện sang trái" class="grid size-10 place-items-center rounded-full border border-white/15 text-xl transition hover:border-violet-400 hover:bg-violet-500/15">‹</button>
+                        <button type="button" data-carousel-next aria-label="Cuộn sự kiện sang phải" class="grid size-10 place-items-center rounded-full border border-white/15 text-xl transition hover:border-violet-400 hover:bg-violet-500/15">›</button>
+                    </div>
+                </div>
+                <div data-event-carousel class="-mx-1 flex snap-x snap-mandatory gap-5 overflow-x-auto px-1 pb-3 [scrollbar-width:thin] [scrollbar-color:#7c3aed_#262626]">
+                    @foreach ($featuredEvents as $event)
+                        <article class="group w-[min(82vw,360px)] shrink-0 snap-start overflow-hidden rounded-2xl bg-neutral-950 transition hover:-translate-y-1" data-event-card data-carousel-card data-category="{{ $event->category }}" data-city="{{ $event->city_key }}" data-date="{{ $event->starts_at->format('Y-m-d') }}" data-search="{{ \Illuminate\Support\Str::lower($event->title.' '.$event->category.' '.$event->city.' '.$event->venue) }}">
+                            <div class="overflow-hidden">
+                                <img src="{{ asset($event->cover_image) }}" alt="{{ $event->title }}" loading="lazy" class="aspect-[16/9] w-full object-cover transition duration-500 group-hover:scale-105">
+                            </div>
+                            <div class="p-4">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-violet-300">Tháng {{ $event->starts_at->format('m/Y') }}</p>
+                                <h3 class="mt-2 line-clamp-2 min-h-12 text-base font-bold leading-6">{{ $event->title }}</h3>
+                                <p class="mt-3 font-bold text-emerald-400">Từ {{ number_format($event->ticketTypes->min('price') ?? 0, 0, ',', '.') }}đ</p>
+                                <div class="mt-2 flex items-center justify-between gap-3 text-sm text-neutral-400">
+                                    <span>{{ $event->starts_at->format('d/m/Y') }}</span>
+                                    {{-- Link xem vé: bổ sung URL tại đây khi có trang nội bộ. --}}
+                                    <a href="" class="shrink-0 font-semibold text-white underline decoration-violet-400 underline-offset-4 hover:text-violet-300">Xem vé</a>
+                                </div>
+                            </div>
+                        </article>
+                    @endforeach
+                </div>
+            </section>
+        @endif
+
         <section id="events" class="pt-7" aria-labelledby="events-heading">
             <div class="mb-5 flex items-center justify-between">
-                <h2 id="events-heading" class="text-xl font-semibold sm:text-2xl">  </h2>
+                <h2 id="events-heading" class="text-xl font-semibold sm:text-2xl">Sự kiện sắp tới</h2>
                 <span class="text-xs text-neutral-500 sm:text-sm" data-event-count>{{ $events->count() }} sự kiện</span>
             </div>
 
@@ -108,8 +144,7 @@
                 <div class="grid grid-cols-1 gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4" data-event-grid>
                     @foreach ($events as $event)
                         @php
-                            $categoryLabels = ['music' => 'Nhạc sống', 'festival' => 'Lễ hội', 'theatre' => 'Sân khấu'];
-                            $startingPrice = $event->ticketTypes->min('price') ?? 0;
+                            $categoryLabels = ['music' => 'Nhạc sống', 'festival' => 'Lễ hội', 'theatre' => 'Sân khấu', 'experience' => 'Trải nghiệm'];
                         @endphp
                         <article
                             class="group min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-neutral-900 transition duration-200 hover:-translate-y-1 hover:border-violet-400/50 hover:shadow-xl hover:shadow-violet-950/20"
@@ -129,9 +164,10 @@
                                 <div class="mt-3 flex items-end justify-between gap-3 rounded-xl border border-violet-400/15 bg-violet-500/[0.06] px-3.5 py-3">
                                     <div>
                                         <p class="text-[11px] font-medium uppercase tracking-wider text-neutral-500">Giá vé từ</p>
-                                        <p class="mt-0.5 text-base font-bold text-violet-300">{{ number_format($startingPrice, 0, ',', '.') }}đ</p>
+                                        <p class="mt-0.5 text-base font-bold text-violet-300">{{ number_format($event->ticketTypes->min('price') ?? 0, 0, ',', '.') }}đ</p>
                                     </div>
-                                    <a href="" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 rounded-full bg-violet-600 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400" aria-label="Xem vé {{ $event->title }} trên Ticketbox">
+                                    {{-- Link xem vé: bổ sung URL tại đây khi có trang nội bộ. --}}
+                                    <a href="" class="inline-flex items-center gap-1.5 rounded-full bg-violet-600 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400" aria-label="Xem vé {{ $event->title }}">
                                         Xem vé <svg class="size-3.5" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7 4h9v9M16 4 8 12M14 11v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                     </a>
                                 </div>
@@ -171,6 +207,10 @@
             const cards = [...document.querySelectorAll('[data-event-card]')];
             const noResults = document.querySelector('[data-no-results]');
             const eventCount = document.querySelector('[data-event-count]');
+            const carousel = document.querySelector('[data-event-carousel]');
+
+            document.querySelector('[data-carousel-prev]')?.addEventListener('click', () => carousel?.scrollBy({ left: -380, behavior: 'smooth' }));
+            document.querySelector('[data-carousel-next]')?.addEventListener('click', () => carousel?.scrollBy({ left: 380, behavior: 'smooth' }));
 
             searchForm.addEventListener('submit', event => event.preventDefault());
 
@@ -190,7 +230,7 @@
                         && daysUntilEvent <= days;
 
                     card.classList.toggle('hidden', !visible);
-                    if (visible) visibleCount++;
+                    if (visible && !card.hasAttribute('data-carousel-card')) visibleCount++;
                 });
 
                 noResults?.classList.toggle('hidden', visibleCount > 0);
