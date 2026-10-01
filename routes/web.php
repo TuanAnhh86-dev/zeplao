@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Models\Event;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -26,9 +27,55 @@ Route::get('/select-ticket/{event:slug}', function (Event $event) {
     abort_unless($event->is_published, 404);
 
     $event->load('ticketTypes');
+    $introductionImages = collect(File::files(public_path('images/events')))
+        ->filter(function ($file) use ($event) {
+            $filename = pathinfo($file->getFilename(), PATHINFO_FILENAME);
+            $extension = strtolower($file->getExtension());
 
-    return view('select-ticket', compact('event'));
+            if (! in_array($extension, ['jpg', 'jpeg', 'png', 'webp'], true)
+                || ! preg_match('/^sd-(.+?)(?:-\d+)?$/i', $filename, $matches)) {
+                return false;
+            }
+
+            return str_contains($event->slug, strtolower($matches[1]));
+        })
+        ->sortBy(fn ($file) => $file->getFilename())
+        ->map(fn ($file) => 'images/events/'.$file->getFilename())
+        ->values();
+
+    $mapKeys = [
+        'sao-concert-tram-sao-3-26418' => 'sao-concert-tram-3',
+        'the-aura-khong-the-thay-the-nov-2026' => 'the-aura',
+        'the-brothers-do-hoang-hiep-tang-phuc-ha-le-cheng-binh-van-band-26364' => 'the-brothers',
+        'edge-of-calm-tour-tiffany-young-in-ho-chi-minh-26448' => 'tiffany-young',
+    ];
+    $mapKey = $mapKeys[$event->slug] ?? null;
+    $seatMapImage = $mapKey
+        ? collect(File::files(public_path('images/map')))
+            ->first(fn ($file) => strtolower(pathinfo($file->getFilename(), PATHINFO_FILENAME)) === 'sd-'.$mapKey)
+        : null;
+    $seatMapImage = $seatMapImage ? 'images/map/'.$seatMapImage->getFilename() : null;
+
+    return view('select-ticket', compact('event', 'introductionImages', 'seatMapImage'));
 })->middleware('auth')->name('select-ticket');
+
+Route::get('/ticket-detail/{event:slug}', function (Event $event) {
+    abort_unless($event->is_published, 404);
+    $event->load('ticketTypes');
+    $mapKeys = [
+        'sao-concert-tram-sao-3-26418' => 'sao-concert-tram-3',
+        'the-aura-khong-the-thay-the-nov-2026' => 'the-aura',
+        'the-brothers-do-hoang-hiep-tang-phuc-ha-le-cheng-binh-van-band-26364' => 'the-brothers',
+        'edge-of-calm-tour-tiffany-young-in-ho-chi-minh-26448' => 'tiffany-young',
+    ];
+    $mapKey = $mapKeys[$event->slug] ?? null;
+    $mapFile = $mapKey ? collect(File::files(public_path('images/map')))->first(
+        fn ($file) => strtolower(pathinfo($file->getFilename(), PATHINFO_FILENAME)) === 'sd-'.$mapKey
+    ) : null;
+    $seatMapImage = $mapFile ? 'images/map/'.$mapFile->getFilename() : null;
+
+    return view('ticket-detail', compact('event', 'seatMapImage'));
+})->middleware('auth')->name('ticket-detail');
 
 Route::get('/login', [AuthController::class, 'login'])->name('login');
 Route::post('/login', [AuthController::class, 'authenticate'])->name('login.authenticate');

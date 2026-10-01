@@ -74,7 +74,7 @@ class EventSeeder extends Seeder
                 'slug' => 'the-aura-khong-the-thay-the-nov-2026',
                 'category' => 'music', 'city' => 'Hà Nội', 'city_key' => 'hanoi',
                 'venue' => 'Cung Thể thao Điền kinh Mỹ Đình', 'starts_at' => '2027-01-23 19:30:00',
-                'cover_image' => 'images/events/the-aura-november-2026.jpg',
+                'cover_image' => 'images/events/the-aura-november-2026.png',
                 'introduction' => html_entity_decode('THE AURA - KH&#212;NG TH&#7874; THAY TH&#7870; quy t&#7909; b&#7889;n ngh&#7879; s&#297; Isaac, Jun Ph&#7841;m, Will v&#224; S.T S&#417;n Th&#7841;ch trong m&#7897;t &#273;&#234;m nh&#7841;c t&#7841;i H&#224; N&#7897;i. M&#7895;i ngh&#7879; s&#297; mang theo m&#7897;t m&#224;u s&#7855;c ri&#234;ng, c&#249;ng t&#7841;o n&#234;n nh&#7919;ng ti&#7871;t m&#7909;c v&#224; kho&#7843;nh kh&#7855;c giao l&#432;u d&#224;nh cho kh&#225;n gi&#7843;. Ch&#432;&#417;ng tr&#236;nh di&#7877;n ra t&#7841;i Cung Th&#7875; thao &#272;i&#7873;n kinh M&#7929; &#272;&#236;nh; c&#225;c h&#7841;ng v&#233; &#273;&#432;&#7907;c chia theo khu v&#7921;c v&#224; m&#7913;c gi&#225; &#273;&#7875; b&#7841;n d&#7877; ch&#7885;n tr&#7843;i nghi&#7879;m ph&#249; h&#7907;p.', ENT_QUOTES | ENT_HTML5, 'UTF-8'),
                 'ticket_name' => 'Giá vé từ Ticketbox', 'price' => 1250000,
             ],
@@ -97,6 +97,101 @@ class EventSeeder extends Seeder
                 'ticket_types' => [ ['name' => '1st Row (L&R)', 'price' => 2610000], ['name' => 'RED', 'price' => 2430000], ['name' => 'YELLOW', 'price' => 2160000], ['name' => 'PINK', 'price' => 1800000], ['name' => 'GREEN', 'price' => 1620000], ['name' => 'BLUE', 'price' => 1170000], ['name' => 'PURPLE', 'price' => 1000000] ],
             ],
         ];
+
+        $repairMojibake = static function (string $value): string {
+            for ($attempt = 0; $attempt < 3; $attempt++) {
+                if (! preg_match('/(?:Ã|áº|á»|Ä|Æ|Â|â€)/u', $value)) {
+                    break;
+                }
+
+                try {
+                    $decoded = @iconv('UTF-8', 'Windows-1252', $value);
+                } catch (\Throwable) {
+                    $decoded = false;
+                }
+
+                if ($decoded === false || $decoded === $value) {
+                    break;
+                }
+
+                $value = $decoded;
+            }
+
+            return $value;
+        };
+
+        foreach ($events as &$eventData) {
+            foreach (['title', 'city', 'venue', 'ticket_name'] as $field) {
+                if (isset($eventData[$field]) && is_string($eventData[$field])) {
+                    $eventData[$field] = $repairMojibake($eventData[$field]);
+                }
+            }
+        }
+        unset($eventData);
+
+        $ticket = static function (string $name, int $price) use ($repairMojibake): array {
+            return ['name' => $repairMojibake($name), 'price' => $price];
+        };
+        $ticketSets = [
+            'the-aura-khong-the-thay-the-nov-2026' => array_map($ticket, [
+                'Niên Thiếu 1 (Standing)', 'Niên Thiếu 2 (Standing)', 'Tương Phùng 1 (Standing)', 'Tương Phùng 2 (Standing)',
+                'Hào Quang (Seating)', 'Độc Bản (Seating)', 'Dấu Ấn 1 (Seating)', 'Dấu Ấn 2 (Seating)',
+                'Ngôi Sao 1 (Seating)', 'Ngôi Sao 2 (Seating)', 'Ngôi Sao 3 (Seating)', 'Ngôi Sao 4 (Seating)',
+                'Ngôi Sao 5 (Seating)', 'Ngôi Sao 6 (Seating)', 'Ngôi Sao 7 (Seating)', 'Ngôi Sao 8 (Seating)',
+                'Hoàng Kim 1 (Seating)', 'Hoàng Kim 2 (Seating)', 'Hoàng Kim 3 (Seating)', 'Hoàng Kim 4 (Seating)',
+                'Hoàng Kim 5 (Seating)', 'Hoàng Kim 6 (Seating)', 'Hoàng Kim 7 (Seating)', 'Hoàng Kim 8 (Seating)',
+                'Hội Ngộ 1 (Seating)', 'Hội Ngộ 2 (Seating)',
+            ], [1850000, 1850000, 1350000, 1350000, 3650000, 3050000, 2450000, 2450000,
+                1950000, 1950000, 1950000, 1950000, 1950000, 1950000, 1950000, 1950000,
+                1650000, 1650000, 1650000, 1650000, 1650000, 1650000, 1650000, 1650000,
+                1250000, 1250000]),
+            'tinh-ha-say-hi-dem-3-26590' => array_map($ticket,
+                ['SKY LOUNGE', 'SVIP A', 'SVIP B', 'VIP A', 'VIP B', 'FANZONE A', 'FANZONE B', 'CAT 1A', 'CAT 1B', 'CAT 2A', 'CAT 2B', 'CAT 3A', 'CAT 3B', 'GA 1A', 'GA 1B', 'GA 2A', 'GA 2B'],
+                [10000000, 5000000, 5000000, 4000000, 4000000, 2500000, 2500000, 2500000, 2500000, 1800000, 1800000, 1500000, 1500000, 1100000, 1100000, 800000, 800000]),
+            'edge-of-calm-tour-tiffany-young-in-ho-chi-minh-26448' => array_map($ticket,
+                ['VIP 1', 'VIP 2', 'R1', 'R2', 'S1', 'S2', 'A1', 'A2', 'B1 (Restricted view)', 'B2 (Restricted view)', 'B3 (Restricted view)', 'B4 (Restricted view)'],
+                [5500000, 5500000, 4000000, 4000000, 3000000, 3000000, 2000000, 2000000, 1800000, 1800000, 1800000, 1800000]),
+            'make-it-together-dinh-manh-ninh-will-hoang-ton-nov-2026' => array_map($ticket,
+                ['Amazing', 'Ánh Sáng', 'Mùa Xuân', 'Đại Dương', 'Cơn Mưa Hạ', 'Tan Biến', 'Dành Cho Em', 'Together'],
+                [2800000, 2500000, 2300000, 1800000, 1650000, 1300000, 850000, 650000]),
+            'mr-siro-encore-extended-ai-cung-giau-trong-long-tang-bang-ha-noi-26333' => array_map($ticket,
+                ['SVIP - Em', 'VVIP - Một Bước Yêu Vạn Dặm Đau', 'VIP - Day Dứt Nỗi Đau', 'Dưới Những Cơn Mưa', 'Vô Hình Trong Tim Em', 'Lắng Nghe Nước Mắt', 'Khóc Cùng Em 1', 'Khóc Cùng Em 2', 'Khóc Cùng Em 3', 'Vé Mời'],
+                [5000000, 3000000, 2800000, 2400000, 2000000, 1600000, 1500000, 1200000, 800000, 3200000]),
+            'giua-mot-van-tour-phung-khanh-linh-mo-rong-26459' => array_map($ticket,
+                ['BLACK SWAN (Super Sponsor)', 'BLACK DUCK (Sponsor | Đồng)', 'SWAN', 'THE SKY', 'THE LAKE (Đứng) - Trái', 'THE LAKE (Đứng) - Phải', 'SWORD', 'BALLERINA (Đứng) - Trái', 'BALLERINA (Đứng) - Phải', 'FEATHER', 'MOONLIGHT', 'ANTI (T_T) (Restricted View)'],
+                [12000000, 8600000, 3000000, 2800000, 2500000, 2500000, 2200000, 1600000, 1600000, 1200000, 1000000, 700000]),
+            'the-brothers-do-hoang-hiep-tang-phuc-ha-le-cheng-binh-van-band-26364' => array_map($ticket,
+                ['1st Row', '1st Row (L&R)', 'RED', 'YELLOW', 'PINK', 'GREEN', 'BLUE', 'PURPLE'],
+                [3000000, 2900000, 2700000, 2400000, 2000000, 1800000, 1300000, 1000000]),
+            'dia-dao-cu-chi-trang-chien-khu-89666-89666' => [$ticket('TRĂNG CHIẾN KHU', 399000)],
+        ];
+
+        $saoTickets = [];
+        foreach ([
+            'ULTRA VIP' => [1550000, ['L1', 'L2', 'R1', 'R2']],
+            'STARDOM' => [688000, ['L', 'R']],
+            'FANZONE' => [488000, ['L', 'R']],
+            'SVIP' => [1250000, ['L1', 'L2', 'R1', 'R2']],
+            'VVIP' => [1150000, ['L1', 'L2', 'L3', 'L4', 'R1', 'R2', 'R3', 'R4']],
+            'VIP' => [1050000, ['L1', 'L2', 'L3', 'L4', 'R1', 'R2', 'R3', 'R4']],
+        ] as $category => [$price, $zones]) {
+            foreach ($zones as $zone) {
+                $saoTickets[] = $ticket($category.' - '.$zone, $price);
+            }
+        }
+        foreach ([920000, 880000, 820000, 780000, 720000, 680000, 620000, 580000, 520000, 480000, 420000, 380000, 350000, 320000, 300000] as $index => $price) {
+            foreach (['L', 'R'] as $side) {
+                $saoTickets[] = $ticket('CAT '.($index + 1).' - '.$side, $price);
+            }
+        }
+        $ticketSets['sao-concert-tram-sao-3-26418'] = $saoTickets;
+
+        foreach ($events as &$eventData) {
+            if (isset($ticketSets[$eventData['slug']])) {
+                $eventData['ticket_types'] = $ticketSets[$eventData['slug']];
+            }
+        }
+        unset($eventData);
 
         $introductions = [
             'dia-dao-cu-chi-trang-chien-khu-89666-89666' => html_entity_decode('Tr&#259;ng Chi&#7871;n Khu l&#224; ch&#432;&#417;ng tr&#236;nh tham quan ban &#273;&#234;m t&#7841;i &#272;&#7883;a &#273;&#7841;o C&#7911; Chi, t&#225;i hi&#7879;n cu&#7897;c s&#7889;ng c&#7911;a ng&#432;&#7901;i d&#226;n trong v&#249;ng gi&#7843;i ph&#243;ng giai &#273;o&#7841;n 1961&ndash;1964. D&#432;&#7899;i &#225;nh tr&#259;ng, kh&#225;n gi&#7843; theo d&#245;i nh&#7919;ng c&#7843;nh sinh ho&#7841;t nh&#432; &#273;&#224;o &#273;&#7883;a &#273;&#7841;o, &#273;an l&#225;t, xay l&#250;a, gi&#227; g&#7841;o, h&#7885;p ch&#7907; v&#224; thanh ni&#234;n &#273;&#259;ng k&#253; t&#242;ng qu&#226;n; c&#225;c ti&#7871;t m&#7909;c v&#259;n c&#244;ng c&#249;ng &#226;m thanh bom, ph&#225;o, m&#225;y bay l&#224;m s&#7889;ng l&#7841;i kh&#244;ng kh&#237; l&#224;ng qu&#234; th&#7901;i chi&#7871;n. Su&#7845;t di&#7877;n k&#233;o d&#224;i t&#7915; 18:00 &#273;&#7871;n 20:30 v&#224; kh&#225;ch tham d&#7921; &#273;&#432;&#7907;c nh&#7853;n m&#7897;t m&#243;n qu&#224; g&#7855;n v&#7899;i du k&#237;ch C&#7911; Chi.', ENT_QUOTES | ENT_HTML5, 'UTF-8'),

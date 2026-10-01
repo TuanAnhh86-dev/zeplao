@@ -53,8 +53,12 @@
                     </div>
                     <div class="flex items-center gap-3">
                         <span class="hidden text-sm text-neutral-400 sm:inline">{{ $featuredEvents->count() }} sự kiện</span>
-                        <button type="button" data-carousel-prev aria-label="Cuộn sự kiện sang trái" class="grid size-10 place-items-center rounded-full border border-white/15 text-xl transition hover:border-violet-400 hover:bg-violet-500/15">‹</button>
-                        <button type="button" data-carousel-next aria-label="Cuộn sự kiện sang phải" class="grid size-10 place-items-center rounded-full border border-white/15 text-xl transition hover:border-violet-400 hover:bg-violet-500/15">›</button>
+                        <button type="button" data-carousel-prev aria-label="Cuộn sự kiện sang trái" class="grid size-10 place-items-center rounded-full border border-white/15 transition hover:border-violet-400 hover:bg-violet-500/15">
+                            <svg class="size-5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m14.5 5-7 7 7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </button>
+                        <button type="button" data-carousel-next aria-label="Cuộn sự kiện sang phải" class="grid size-10 place-items-center rounded-full border border-white/15 transition hover:border-violet-400 hover:bg-violet-500/15">
+                            <svg class="size-5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m9.5 5 7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </button>
                     </div>
                 </div>
                 <div data-event-carousel class="-mx-1 flex snap-x snap-mandatory gap-5 overflow-x-auto px-1 pb-3 [scrollbar-width:thin] [scrollbar-color:#7c3aed_#262626]">
