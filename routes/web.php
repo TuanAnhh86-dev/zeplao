@@ -46,8 +46,11 @@ Route::get('/select-ticket/{event:slug}', function (Event $event) {
     $mapKeys = [
         'sao-concert-tram-sao-3-26418' => 'sao-concert-tram-3',
         'the-aura-khong-the-thay-the-nov-2026' => 'the-aura',
-        'the-brothers-do-hoang-hiep-tang-phuc-ha-le-cheng-binh-van-band-26364' => 'the-brothers',
         'edge-of-calm-tour-tiffany-young-in-ho-chi-minh-26448' => 'tiffany-young',
+        'mr-siro-encore-extended-ai-cung-giau-trong-long-tang-bang-ha-noi-26333' => 'ai-cung-giau-trong-long-tang-bang',
+        'giua-mot-van-tour-phung-khanh-linh-mo-rong-26459' => 'giua-mot-van-tour',
+        'make-it-together-dinh-manh-ninh-will-hoang-ton-nov-2026' => 'make-it-together',
+        'tinh-ha-say-hi-dem-3-26590' => 'say-hi',
     ];
     $mapKey = $mapKeys[$event->slug] ?? null;
     $seatMapImage = $mapKey
@@ -65,8 +68,11 @@ Route::get('/ticket-detail/{event:slug}', function (Event $event) {
     $mapKeys = [
         'sao-concert-tram-sao-3-26418' => 'sao-concert-tram-3',
         'the-aura-khong-the-thay-the-nov-2026' => 'the-aura',
-        'the-brothers-do-hoang-hiep-tang-phuc-ha-le-cheng-binh-van-band-26364' => 'the-brothers',
         'edge-of-calm-tour-tiffany-young-in-ho-chi-minh-26448' => 'tiffany-young',
+        'mr-siro-encore-extended-ai-cung-giau-trong-long-tang-bang-ha-noi-26333' => 'ai-cung-giau-trong-long-tang-bang',
+        'giua-mot-van-tour-phung-khanh-linh-mo-rong-26459' => 'giua-mot-van-tour',
+        'make-it-together-dinh-manh-ninh-will-hoang-ton-nov-2026' => 'make-it-together',
+        'tinh-ha-say-hi-dem-3-26590' => 'say-hi',
     ];
     $mapKey = $mapKeys[$event->slug] ?? null;
     $mapFile = $mapKey ? collect(File::files(public_path('images/map')))->first(
