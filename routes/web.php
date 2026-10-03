@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\VnpayController;
+use App\Http\Controllers\QrScanController;
 use App\Models\Event;
 use App\Services\OrderReservationService;
 use Illuminate\Support\Facades\Auth;
@@ -16,6 +17,9 @@ Route::get('/', function () {
 });
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/qr-scan', [QrScanController::class, 'index'])->name('qr-scan');
+    Route::get('/qr-scan/ticket', [QrScanController::class, 'lookup'])->name('qr-scan.lookup');
+    Route::post('/qr-scan/{qrInfo}/check-in', [QrScanController::class, 'checkIn'])->name('qr-scan.check-in');
     Route::get('/', [AdminController::class, 'index'])->name('dashboard');
     Route::get('/events', [AdminController::class, 'events'])->name('events');
     Route::get('/events/create', [AdminController::class, 'create'])->name('events.create');

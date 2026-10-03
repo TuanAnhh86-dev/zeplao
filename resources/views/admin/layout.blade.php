@@ -22,6 +22,7 @@
             </nav>
             <div class="flex shrink-0 items-center gap-3 text-sm">
                 <span class="hidden max-w-40 truncate text-neutral-400 md:block">{{ auth()->user()->name }}</span>
+                <a href="{{ route('admin.qr-scan') }}" class="rounded-full bg-violet-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-violet-500">Quét QR</a>
                 <form method="POST" action="{{ route('logout') }}">@csrf<button class="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-neutral-300 transition hover:border-rose-400/30 hover:bg-rose-400/10 hover:text-rose-200">Đăng xuất</button></form>
             </div>
         </div>

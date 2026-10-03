@@ -50,7 +50,7 @@
                     <h2 class="mb-3 px-1 text-sm font-bold uppercase tracking-wide text-neutral-300">H&#7841;ng v&#233; v&#224; gi&#225;</h2>
                     @forelse ($event->ticketTypes->sortBy('price') as $ticketType)
                         @php($available = max(0, $ticketType->quantity - $ticketType->sold - ($reservedQuantities[$ticketType->id] ?? 0)))
-                        <article class="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-neutral-800/80 p-3" data-ticket-row data-ticket-id="{{ $ticketType->id }}" data-price="{{ $ticketType->price }}" data-available="{{ $available }}">
+                        <article class="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-neutral-800/80 p-3" data-ticket-row data-ticket-id="{{ $ticketType->id }}" data-price="{{ $ticketType->price }}" data-available="{{ $available }}" data-prefill-quantity="{{ data_get(request()->query('tickets', []), $ticketType->id, 0) }}">
                             <div class="min-w-0"><h3 class="font-semibold leading-5">{{ $ticketType->name }}</h3><p class="mt-1 text-sm font-bold text-violet-300">{{ number_format($ticketType->price, 0, ',', '.') }} &#273;</p><p data-stock-label class="mt-1 text-xs {{ $available ? 'text-neutral-400' : 'font-semibold text-rose-300' }}">{{ $available ? 'Còn '.$available.' vé' : 'Hết vé' }}</p></div>
                             <div class="flex shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-neutral-950 p-1">
                                 <button type="button" data-ticket-step="-1" aria-label="Gi&#7843;m s&#7889; l&#432;&#7907;ng" class="grid size-8 place-items-center rounded-lg text-neutral-300 transition hover:bg-white/10 disabled:opacity-40" disabled>&minus;</button>
@@ -116,6 +116,16 @@
             const checkout = document.querySelector('[data-ticket-checkout]');
             const message = document.querySelector('[data-ticket-message]');
             const formatPrice = (amount) => new Intl.NumberFormat('vi-VN').format(amount);
+            const prefillTickets = () => {
+                ticketList.querySelectorAll('[data-ticket-row]').forEach((row) => {
+                    const output = row.querySelector('[data-ticket-quantity]');
+                    const max = Math.min(10, Number(row.dataset.available));
+                    const quantity = Math.max(0, Math.min(max, Number(row.dataset.prefillQuantity) || 0));
+                    output.textContent = quantity;
+                    row.querySelector('[data-ticket-step="-1"]').disabled = quantity === 0;
+                    row.querySelector('[data-ticket-step="1"]').disabled = quantity >= max;
+                });
+            };
             const updateTotals = () => {
                 let count = 0;
                 let price = 0;
@@ -141,6 +151,8 @@
                 row.querySelector('[data-ticket-step="1"]').disabled = quantity >= max;
                 updateTotals();
             });
+            prefillTickets();
+            updateTotals();
             checkout.addEventListener('click', async (event) => {
                 event.stopImmediatePropagation();
                 const tickets = {};

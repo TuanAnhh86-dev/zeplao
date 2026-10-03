@@ -7,6 +7,7 @@ use App\Models\PaymentTransaction;
 use App\Models\TicketType;
 use App\Services\OrderReservationService;
 use App\Services\VnpayService;
+use App\Services\TicketQrService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -25,7 +26,7 @@ class VnpayController extends Controller
         return redirect()->away($vnpay->createPaymentUrl($order, $request));
     }
 
-    public function returned(Request $request, VnpayService $vnpay): RedirectResponse
+    public function returned(Request $request, VnpayService $vnpay, TicketQrService $ticketQrs): RedirectResponse
     {
         $query = $request->query();
         $signatureValid = $vnpay->verifySignature($query);
@@ -42,7 +43,7 @@ class VnpayController extends Controller
             && ($query['vnp_TransactionStatus'] ?? null) === '00';
         $transactionId = $query['vnp_TransactionNo'] ?? null;
         if ($successful && is_string($transactionId) && $transactionId !== '') {
-            $result = $this->confirmPayment($order, $transactionId);
+            $result = $this->confirmPayment($order, $transactionId, $ticketQrs);
             $message = $result['code'] === '00'
                 ? 'VNPay payment succeeded. The order has been updated.'
                 : 'VNPay reported payment success, but the order needs manual reconciliation. The transaction was recorded.';
@@ -53,7 +54,7 @@ class VnpayController extends Controller
         return redirect()->route('payment.show', $order)->with('status', $message);
     }
 
-    public function ipn(Request $request, VnpayService $vnpay): JsonResponse
+    public function ipn(Request $request, VnpayService $vnpay, TicketQrService $ticketQrs): JsonResponse
     {
         $query = $request->query();
         $signatureValid = $vnpay->verifySignature($query);
@@ -80,15 +81,15 @@ class VnpayController extends Controller
             return $this->ipnResponse('99', 'Missing transaction number');
         }
 
-        $result = $this->confirmPayment($order, $transactionId);
+        $result = $this->confirmPayment($order, $transactionId, $ticketQrs);
 
         return $this->ipnResponse($result['code'], $result['message']);
     }
 
-    private function confirmPayment(Order $order, string $transactionId): array
+    private function confirmPayment(Order $order, string $transactionId, TicketQrService $ticketQrs): array
     {
         try {
-            return DB::transaction(function () use ($order, $transactionId): array {
+            return DB::transaction(function () use ($order, $transactionId, $ticketQrs): array {
                 $locked = Order::query()->lockForUpdate()->findOrFail($order->id);
                 if ($locked->status === 'confirmed') {
                     return $locked->payment_transaction_id === $transactionId
@@ -111,6 +112,8 @@ class VnpayController extends Controller
                     $ticket->increment('sold', $item->quantity);
                 }
                 $locked->update(['status' => 'confirmed', 'payment_transaction_id' => $transactionId]);
+                $locked->setRelation('items', $items);
+                $ticketQrs->issueForOrder($locked);
 
                 return ['code' => '00', 'message' => 'Confirm Success'];
             }, attempts: 3);

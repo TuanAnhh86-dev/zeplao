@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\TicketType;
 use App\Models\User;
 use App\Services\OrderReservationService;
+use App\Services\TicketQrService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Http\RedirectResponse;
@@ -342,12 +343,12 @@ class AdminController extends Controller
         return view('admin.customers', compact('customers'));
     }
 
-    public function updateOrder(Request $request, Order $order, OrderReservationService $reservations): RedirectResponse
+    public function updateOrder(Request $request, Order $order, OrderReservationService $reservations, TicketQrService $ticketQrs): RedirectResponse
     {
         $reservations->expirePendingOrders();
         $data = $request->validate(['status' => ['required', Rule::in(['confirmed', 'cancelled'])]]);
 
-        $newStatus = DB::transaction(function () use ($order, $data): string {
+        $newStatus = DB::transaction(function () use ($order, $data, $ticketQrs): string {
             $locked = Order::query()->lockForUpdate()->findOrFail($order->id);
 
             if ($locked->status === 'pending' && $data['status'] === 'confirmed') {
@@ -359,6 +360,8 @@ class AdminController extends Controller
                     $ticket->increment('sold', $item->quantity);
                 }
                 $locked->update(['status' => 'confirmed']);
+                $locked->setRelation('items', $locked->items()->get());
+                $ticketQrs->issueForOrder($locked);
             } elseif ($locked->status === 'pending' && $data['status'] === 'cancelled') {
                 $locked->update(['status' => 'cancelled']);
             } else {

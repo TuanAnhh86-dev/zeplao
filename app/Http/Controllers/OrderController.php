@@ -111,7 +111,8 @@ class OrderController extends Controller
 
     public function transactions(Request $request): \Illuminate\View\View
     {
-        $orders = $request->user()->orders()->with('items')->latest()->paginate(15);
+        app(OrderReservationService::class)->expirePendingOrders();
+        $orders = $request->user()->orders()->with('items.ticketType.event')->latest()->paginate(15);
 
         return view('transactions.index', compact('orders'));
     }
@@ -120,7 +121,7 @@ class OrderController extends Controller
     {
         $orders = $request->user()->orders()
             ->where('status', 'confirmed')
-            ->with('items.ticketType.event')
+            ->with('items.ticketType.event', 'items.qrInfo')
             ->latest()
             ->paginate(15);
 

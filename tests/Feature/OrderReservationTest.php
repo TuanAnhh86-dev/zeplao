@@ -136,10 +136,16 @@ class OrderReservationTest extends TestCase
         $order = Order::create([
             'code' => 'TX-CUSTOM01', 'user_id' => $customer->id, 'total' => 600, 'status' => 'confirmed',
         ]);
-        $order->items()->create([
+        $customerItem = $order->items()->create([
             'ticket_name' => 'General', 'event_title' => 'Customer event',
             'unit_price' => 600, 'quantity' => 1, 'subtotal' => 600,
         ]);
+        $customerItem->qrInfo()->create(['token' => (string) Str::uuid(), 'status' => 'unused']);
+        $usedItem = $order->items()->create([
+            'ticket_name' => 'VIP', 'event_title' => 'Customer event',
+            'unit_price' => 900, 'quantity' => 1, 'subtotal' => 900,
+        ]);
+        $usedItem->qrInfo()->create(['token' => (string) Str::uuid(), 'status' => 'used']);
         $otherOrder = Order::create([
             'code' => 'TX-OTHER001', 'user_id' => $otherCustomer->id, 'total' => 900, 'status' => 'confirmed',
         ]);
@@ -151,8 +157,51 @@ class OrderReservationTest extends TestCase
         $this->withoutVite()->actingAs($customer)->get(route('my-tickets'))
             ->assertOk()
             ->assertSee('Vé của tôi')
+            ->assertSee('Chưa sử dụng')
+            ->assertSee('bg-neutral-200')
+            ->assertSee('Đã sử dụng')
+            ->assertSee('bg-emerald-400')
             ->assertSee('Customer event')
             ->assertDontSee('Private event');
+    }
+
+    public function test_transactions_offer_vnpay_for_pending_orders_and_prefill_cancelled_tickets_for_repurchase(): void
+    {
+        [$event, $ticket] = $this->eventWithTicket(5);
+        $customer = User::factory()->create();
+
+        $pendingOrder = Order::create([
+            'code' => 'TX-PENDING01', 'user_id' => $customer->id, 'total' => 600,
+            'status' => 'pending', 'expires_at' => now()->addMinutes(10),
+        ]);
+        $pendingOrder->items()->create([
+            'ticket_type_id' => $ticket->id, 'ticket_name' => $ticket->name,
+            'event_title' => $event->title, 'unit_price' => 600, 'quantity' => 1, 'subtotal' => 600,
+        ]);
+
+        $cancelledOrder = Order::create([
+            'code' => 'TX-CANCEL001', 'user_id' => $customer->id, 'total' => 1200, 'status' => 'cancelled',
+        ]);
+        $cancelledOrder->items()->create([
+            'ticket_type_id' => $ticket->id, 'ticket_name' => $ticket->name,
+            'event_title' => $event->title, 'unit_price' => 600, 'quantity' => 2, 'subtotal' => 1200,
+        ]);
+
+        $repurchaseUrl = route('ticket-detail', [
+            'event' => $event->slug,
+            'tickets' => [$ticket->id => 2],
+        ]);
+
+        $this->withoutVite()->actingAs($customer)->get(route('transactions.index'))
+            ->assertOk()
+            ->assertSee('Thanh toán qua VNPay')
+            ->assertSee(route('payment.vnpay.start', $pendingOrder), false)
+            ->assertSee('Mua lại')
+            ->assertSee($repurchaseUrl, false);
+
+        $this->get($repurchaseUrl)
+            ->assertOk()
+            ->assertSee('data-prefill-quantity="2"', false);
     }
 
     public function test_event_seeder_initializes_stock_to_ten_and_preserves_existing_stock_and_order_history(): void
