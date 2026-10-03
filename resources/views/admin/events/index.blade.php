@@ -14,8 +14,8 @@
             <option value="">Tất cả thể loại</option>
             @foreach (['music' => 'Nhạc sống', 'festival' => 'Lễ hội', 'theatre' => 'Sân khấu', 'experience' => 'Trải nghiệm'] as $value => $label)<option value="{{ $value }}" @selected(request('category') === $value)>{{ $label }}</option>@endforeach
         </select>
-        <label class="text-xs text-neutral-400">Ngày cụ thể<input type="date" name="date" value="{{ request('date') }}" class="mt-1 block w-full rounded-xl border border-white/10 bg-neutral-950 px-4 py-2.5 text-sm text-white outline-none focus:border-violet-400"></label>
-        <label class="text-xs text-neutral-400">Hoặc chọn tháng<input type="month" name="month" value="{{ request('month') }}" class="mt-1 block w-full rounded-xl border border-white/10 bg-neutral-950 px-4 py-2.5 text-sm text-white outline-none focus:border-violet-400"></label>
+        <label class="text-xs text-neutral-400">Ngày cụ thể<input type="date" name="date" value="{{ request('date') }}" data-event-date-filter class="mt-1 block w-full rounded-xl border border-white/10 bg-neutral-950 px-4 py-2.5 text-sm text-white outline-none focus:border-violet-400"></label>
+        <label class="text-xs text-neutral-400">Hoặc chọn tháng<input type="month" name="month" value="{{ request('month') }}" data-event-month-filter class="mt-1 block w-full rounded-xl border border-white/10 bg-neutral-950 px-4 py-2.5 text-sm text-white outline-none focus:border-violet-400"></label>
         <button class="self-end rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold hover:bg-violet-500">Lọc sự kiện</button>
         @if (request()->hasAny(['q', 'city', 'venue', 'category', 'date', 'month']))<a href="{{ route('admin.events') }}" class="self-end rounded-xl border border-white/15 px-5 py-2.5 text-center text-sm hover:bg-white/5">Xóa bộ lọc</a>@endif
     </form>
@@ -28,11 +28,29 @@
                     <div class="min-w-0"><h2 class="text-lg font-bold">{{ $event->title }}</h2><p class="mt-1 text-sm text-neutral-400">{{ $event->city }} · {{ $event->venue }} · {{ $event->starts_at->format('d/m/Y H:i') }}</p><p class="mt-1 text-xs text-violet-300">{{ ['music' => 'Nhạc sống', 'festival' => 'Lễ hội', 'theatre' => 'Sân khấu', 'experience' => 'Trải nghiệm'][$event->category] ?? $event->category }}</p></div>
                     <div class="flex flex-wrap gap-2"><a href="{{ route('admin.events.edit', $event) }}" class="rounded-full border border-white/15 px-4 py-2 text-sm hover:border-violet-400 hover:text-violet-300">Chỉnh sửa</a><form method="POST" action="{{ route('admin.events.destroy', $event) }}" onsubmit="return confirm('Xóa sự kiện này?')">@csrf @method('DELETE')<button class="rounded-full border border-rose-400/20 px-4 py-2 text-sm text-rose-300 hover:bg-rose-400/10">Xóa</button></form></div>
                 </div>
-                <div class="mt-4 flex flex-wrap gap-2">@foreach ($event->ticketTypes as $ticket)<span class="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs text-neutral-300">{{ $ticket->name }} · {{ number_format($ticket->price, 0, ',', '.') }} ₫ · còn {{ max(0, $ticket->quantity - $ticket->sold) }}/{{ $ticket->quantity }}</span>@endforeach</div>
+                <div class="mt-4 flex flex-wrap gap-2">@foreach ($event->ticketTypes as $ticket)<span class="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs text-neutral-300">{{ $ticket->name }} · {{ number_format($ticket->price, 0, ',', '.') }} ₫ · còn {{ max(0, $ticket->quantity - $ticket->sold - ($reservedQuantities[$ticket->id] ?? 0)) }}/{{ $ticket->quantity }}</span>@endforeach</div>
             </article>
         @empty
             <div class="rounded-2xl border border-dashed border-white/15 p-12 text-center text-neutral-400">Không tìm thấy sự kiện phù hợp.</div>
         @endforelse
     </div>
     <div class="mt-6">{{ $events->links() }}</div>
+    <script>
+        (() => {
+            const dateFilter = document.querySelector('[data-event-date-filter]');
+            const monthFilter = document.querySelector('[data-event-month-filter]');
+            const syncFilters = (changedFilter) => {
+                if (dateFilter.value && monthFilter.value) {
+                    if (changedFilter === monthFilter) dateFilter.value = '';
+                    else monthFilter.value = '';
+                }
+                dateFilter.disabled = Boolean(monthFilter.value);
+                monthFilter.disabled = Boolean(dateFilter.value);
+            };
+
+            dateFilter.addEventListener('input', () => syncFilters(dateFilter));
+            monthFilter.addEventListener('input', () => syncFilters(monthFilter));
+            syncFilters(dateFilter);
+        })();
+    </script>
 @endsection

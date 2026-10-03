@@ -117,6 +117,52 @@ class OrderReservationTest extends TestCase
         $this->assertDatabaseHas('ticket_types', ['id' => $ticket->id, 'quantity' => 1]);
     }
 
+    public function test_admin_event_listing_subtracts_active_holds_from_available_tickets(): void
+    {
+        [$event, $ticket] = $this->eventWithTicket(3);
+        $customer = User::factory()->create();
+        $order = Order::create([
+            'code' => 'TX-HELD001', 'user_id' => $customer->id, 'total' => 100,
+            'status' => 'pending', 'expires_at' => now()->addMinutes(10),
+        ]);
+        $order->items()->create([
+            'ticket_type_id' => $ticket->id,
+            'ticket_name' => $ticket->name,
+            'event_title' => $event->title,
+            'unit_price' => $ticket->price,
+            'quantity' => 1,
+            'subtotal' => $ticket->price,
+        ]);
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->withoutVite()->actingAs($admin)->get(route('admin.events'))
+            ->assertOk()
+            ->assertSee('còn 2/3');
+    }
+
+    public function test_admin_event_date_filter_requires_either_date_or_month(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->from(route('admin.events'))
+            ->actingAs($admin)
+            ->get(route('admin.events', ['date' => '2026-10-03', 'month' => '2026-10']))
+            ->assertRedirect(route('admin.events'))
+            ->assertSessionHasErrors('date');
+    }
+
+    public function test_home_city_filter_options_include_custom_admin_city_keys(): void
+    {
+        [$event] = $this->eventWithTicket(3);
+        $event->update(['city' => 'Cần Thơ', 'city_key' => 'can-tho']);
+        $customer = User::factory()->create();
+
+        $this->withoutVite()->actingAs($customer)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('value="can-tho"', false)
+            ->assertSee('Cần Thơ');
+    }
+
     public function test_ticket_detail_displays_available_stock_after_active_holds(): void
     {
         [$event, $ticket] = $this->eventWithTicket(1);

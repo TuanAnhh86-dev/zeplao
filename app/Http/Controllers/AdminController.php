@@ -14,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class AdminController extends Controller
@@ -89,7 +90,7 @@ class AdminController extends Controller
         ]);
     }
 
-    public function events(Request $request): View
+    public function events(Request $request, OrderReservationService $reservations): View
     {
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:100'],
@@ -99,6 +100,12 @@ class AdminController extends Controller
             'date' => ['nullable', 'date_format:Y-m-d'],
             'month' => ['nullable', 'date_format:Y-m'],
         ]);
+
+        if (filled($filters['date'] ?? null) && filled($filters['month'] ?? null)) {
+            throw ValidationException::withMessages([
+                'date' => 'Chỉ chọn lọc theo ngày hoặc theo tháng, không chọn cả hai.',
+            ]);
+        }
 
         $events = Event::query()
             ->with('ticketTypes')
@@ -121,10 +128,14 @@ class AdminController extends Controller
             ->paginate(12)
             ->withQueryString();
 
+        $ticketTypeIds = $events->getCollection()
+            ->flatMap(fn (Event $event) => $event->ticketTypes->pluck('id'))
+            ->all();
+        $reservedQuantities = $reservations->reservedQuantities($ticketTypeIds);
         $cities = Event::query()->select('city')->distinct()->orderBy('city')->pluck('city');
         $venues = Event::query()->select('venue')->distinct()->orderBy('venue')->pluck('venue');
 
-        return view('admin.events.index', compact('events', 'cities', 'venues'));
+        return view('admin.events.index', compact('events', 'cities', 'venues', 'reservedQuantities'));
     }
 
     public function create(): View

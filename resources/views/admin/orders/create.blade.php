@@ -1,7 +1,7 @@
 @extends('admin.layout')
 @section('title', 'Tạo đơn đặt vé')
 @section('content')
-    <div class="mb-7"><a href="{{ route('admin.orders') }}" class="text-sm font-semibold text-violet-300 hover:text-violet-200">← Quay lại giao dịch</a><h1 class="mt-3 text-3xl font-bold">Tạo đơn đặt vé</h1><p class="mt-2 text-sm text-neutral-400">Đơn mới ở trạng thái chưa thanh toán và không giữ vé trong kho.</p></div>
+    <div class="mb-7"><a href="{{ route('admin.orders') }}" class="text-sm font-semibold text-violet-300 hover:text-violet-200">← Quay lại giao dịch</a><h1 class="mt-3 text-3xl font-bold">Tạo đơn đặt vé</h1><p class="mt-2 text-sm text-neutral-400">Đơn mới ở trạng thái chưa thanh toán và giữ vé trong kho tối đa 10 phút.</p></div>
     <form method="POST" action="{{ route('admin.orders.store') }}" class="max-w-3xl space-y-5 rounded-2xl border border-white/10 bg-neutral-900 p-5 sm:p-7">
         @csrf
         <label class="block text-sm font-semibold">Khách hàng<select name="user_id" required class="mt-2 block w-full rounded-xl border border-white/10 bg-neutral-950 px-4 py-3 text-sm font-normal"><option value="">Chọn khách hàng</option>@foreach ($customers as $customer)<option value="{{ $customer->id }}" @selected(old('user_id') == $customer->id)>{{ $customer->name }} — {{ $customer->email }}</option>@endforeach</select>@error('user_id')<span class="mt-1 block text-xs text-rose-300">{{ $message }}</span>@enderror</label>

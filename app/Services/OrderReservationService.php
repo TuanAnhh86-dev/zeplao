@@ -28,14 +28,19 @@ class OrderReservationService
             });
     }
 
-    public function reservedQuantity(int $ticketTypeId): int
+    public function reservedQuantity(int $ticketTypeId, ?int $exceptOrderId = null): int
     {
-        return (int) DB::table('order_items')
+        $query = DB::table('order_items')
             ->join('orders', 'orders.id', '=', 'order_items.order_id')
             ->where('order_items.ticket_type_id', $ticketTypeId)
             ->where('orders.status', 'pending')
-            ->where('orders.expires_at', '>', now())
-            ->sum('order_items.quantity');
+            ->where('orders.expires_at', '>', now());
+
+        if ($exceptOrderId !== null) {
+            $query->where('orders.id', '!=', $exceptOrderId);
+        }
+
+        return (int) $query->sum('order_items.quantity');
     }
 
     /** @return array<int, int> Ticket type ID => quantity held by active orders. */

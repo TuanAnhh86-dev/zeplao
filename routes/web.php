@@ -42,8 +42,12 @@ Route::get('/dashboard', function () {
         ->get();
 
     $featuredEvents = $events->values();
+    $cityOptions = $events
+        ->unique('city_key')
+        ->sortBy('city')
+        ->values();
 
-    return view('home', compact('events', 'featuredEvents'));
+    return view('home', compact('events', 'featuredEvents', 'cityOptions'));
 })->middleware('auth')->name('dashboard');
 
 Route::get('/select-ticket/{event:slug}', function (Event $event) {

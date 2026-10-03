@@ -36,10 +36,9 @@
                 <label class="sr-only" for="city-filter">Thành phố</label>
                 <select id="city-filter" class="h-11 cursor-pointer rounded-xl border border-white/10 bg-neutral-800 px-4 text-sm font-semibold text-white outline-none transition hover:border-violet-400/70 focus:border-violet-400 focus:ring-2 focus:ring-violet-500/20" data-city-filter>
                     <option class="bg-neutral-900 text-white" value="all">Mọi địa điểm</option>
-                    <option class="bg-neutral-900 text-white" value="hcm">TP. Hồ Chí Minh</option>
-                    <option class="bg-neutral-900 text-white" value="hanoi">Hà Nội</option>
-                    <option class="bg-neutral-900 text-white" value="danang">Đà Nẵng</option>
-                    <option class="bg-neutral-900 text-white" value="dalat">Đà Lạt</option>
+                    @foreach ($cityOptions as $cityOption)
+                        <option class="bg-neutral-900 text-white" value="{{ $cityOption->city_key }}">{{ $cityOption->city }}</option>
+                    @endforeach
                 </select>
             </div>
         </div>

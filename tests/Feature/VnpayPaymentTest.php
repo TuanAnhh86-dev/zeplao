@@ -73,6 +73,40 @@ class VnpayPaymentTest extends TestCase
         $this->assertSame(0, TicketType::firstOrFail()->sold);
     }
 
+    public function test_late_successful_ipn_does_not_take_tickets_reserved_by_another_order(): void
+    {
+        $expiredOrder = $this->pendingOrder();
+        $ticket = TicketType::firstOrFail();
+        $ticket->update(['quantity' => 1]);
+        $expiredOrder->update(['status' => 'cancelled']);
+
+        $competingOrder = Order::create([
+            'code' => 'TX-COMPETING',
+            'user_id' => $expiredOrder->user_id,
+            'total' => $expiredOrder->total,
+            'status' => 'pending',
+            'expires_at' => now()->addMinutes(10),
+            'idempotency_key' => (string) Str::uuid(),
+        ]);
+        $competingOrder->items()->create([
+            'ticket_type_id' => $ticket->id,
+            'ticket_name' => 'General',
+            'event_title' => 'VNPay test',
+            'unit_price' => 100000,
+            'quantity' => 1,
+            'subtotal' => 100000,
+        ]);
+
+        $query = $this->signedCallback($expiredOrder);
+        $this->getJson(route('payment.vnpay.ipn').'?'.http_build_query($query))
+            ->assertOk()
+            ->assertJson(['RspCode' => '04']);
+
+        $this->assertSame('cancelled', $expiredOrder->fresh()->status);
+        $this->assertSame(0, $ticket->fresh()->sold);
+        $this->assertSame('pending', $competingOrder->fresh()->status);
+    }
+
     private function pendingOrder(): Order
     {
         $event = Event::create([
