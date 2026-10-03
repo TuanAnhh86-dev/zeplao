@@ -24,6 +24,8 @@ class AdminController extends Controller
             'revenue_date' => ['nullable', 'date_format:Y-m-d'],
             'revenue_month' => ['nullable', 'date_format:Y-m'],
             'revenue_year' => ['nullable', 'digits:4', 'integer', 'between:2000,2100'],
+            'revenue_chart' => ['nullable', Rule::in(['bars', 'area'])],
+            'revenue_metric' => ['nullable', Rule::in(['revenue', 'orders'])],
         ]);
         $period = $filters['revenue_period'] ?? 'month';
         $start = match ($period) {
@@ -78,6 +80,8 @@ class AdminController extends Controller
             'revenueStart' => $start,
             'revenueEnd' => $end,
             'revenueRows' => $revenueRows,
+            'revenueChart' => $filters['revenue_chart'] ?? 'bars',
+            'revenueMetric' => $filters['revenue_metric'] ?? 'revenue',
             'selectedRevenue' => $selectedRevenue,
             'selectedRevenueOrders' => $revenueOrders->count(),
             'recentOrders' => Order::with('user', 'items')->latest()->limit(8)->get(),
