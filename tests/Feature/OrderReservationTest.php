@@ -32,7 +32,7 @@ class OrderReservationTest extends TestCase
         $first = $this->actingAs($user)->postJson(route('orders.store', $event), [
             'tickets' => [$ticket->id => 1], 'idempotency_key' => $key,
         ])->assertOk();
-        $this->assertSame('Đã giữ vé trong 10 phút. Đơn đang chờ xác nhận.', $first->json('message'));
+        $this->assertSame('Đơn đã tạo. Vui lòng tiếp tục đến trang thanh toán.', $first->json('message'));
         $order = Order::where('code', $first->json('code'))->firstOrFail();
         $this->assertSame(600, $order->expires_at->timestamp - $order->created_at->timestamp);
 
@@ -60,7 +60,7 @@ class OrderReservationTest extends TestCase
         $this->travel(11)->minutes();
         $admin = User::factory()->create(['role' => 'admin']);
         $this->actingAs($admin)->patch(route('admin.orders.update', $order), ['status' => 'confirmed'])
-            ->assertSessionHasErrors(['order']);
+            ->assertStatus(422);
 
         $this->postJson(route('orders.store', $event), [
             'tickets' => [$ticket->id => 1], 'idempotency_key' => (string) Str::uuid(),
@@ -127,6 +127,32 @@ class OrderReservationTest extends TestCase
 
         $this->withoutVite()->get(route('ticket-detail', $event))
             ->assertOk()->assertSee('data-available="0"', false);
+    }
+
+    public function test_my_tickets_page_shows_only_the_authenticated_users_orders(): void
+    {
+        $customer = User::factory()->create();
+        $otherCustomer = User::factory()->create();
+        $order = Order::create([
+            'code' => 'TX-CUSTOM01', 'user_id' => $customer->id, 'total' => 600, 'status' => 'confirmed',
+        ]);
+        $order->items()->create([
+            'ticket_name' => 'General', 'event_title' => 'Customer event',
+            'unit_price' => 600, 'quantity' => 1, 'subtotal' => 600,
+        ]);
+        $otherOrder = Order::create([
+            'code' => 'TX-OTHER001', 'user_id' => $otherCustomer->id, 'total' => 900, 'status' => 'confirmed',
+        ]);
+        $otherOrder->items()->create([
+            'ticket_name' => 'VIP', 'event_title' => 'Private event',
+            'unit_price' => 900, 'quantity' => 1, 'subtotal' => 900,
+        ]);
+
+        $this->withoutVite()->actingAs($customer)->get(route('my-tickets'))
+            ->assertOk()
+            ->assertSee('Vé của tôi')
+            ->assertSee('Customer event')
+            ->assertDontSee('Private event');
     }
 
     public function test_event_seeder_initializes_stock_to_ten_and_preserves_existing_stock_and_order_history(): void

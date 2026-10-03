@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OrderItem extends Model
 {
-    protected $fillable = ['ticket_type_id', 'ticket_name', 'unit_price', 'quantity', 'subtotal'];
+    protected $fillable = ['ticket_type_id', 'ticket_name', 'event_title', 'unit_price', 'quantity', 'subtotal'];
 
     protected function casts(): array
     {

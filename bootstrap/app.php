@@ -3,7 +3,9 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Console\Scheduling\Schedule;
 use App\Http\Middleware\EnsureUserIsAdmin;
+use App\Services\OrderReservationService;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -12,7 +14,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->trustProxies(at: ['127.0.0.1', '::1']);
         $middleware->alias(['admin' => EnsureUserIsAdmin::class]);
+    })
+    ->withSchedule(function (Schedule $schedule): void {
+        $schedule->call(fn () => app(OrderReservationService::class)->expirePendingOrders())
+            ->name('expire-pending-order-holds')->everyMinute()->withoutOverlapping();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

@@ -8,11 +8,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Order extends Model
 {
-    protected $fillable = ['code', 'user_id', 'total', 'status', 'idempotency_key'];
+    protected $fillable = ['code', 'user_id', 'total', 'status', 'expires_at', 'idempotency_key', 'payment_transaction_id'];
 
     protected function casts(): array
     {
-        return ['total' => 'integer'];
+        return ['total' => 'integer', 'expires_at' => 'datetime'];
     }
 
     public function user(): BelongsTo
@@ -23,5 +23,10 @@ class Order extends Model
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    public function paymentTransactions(): HasMany
+    {
+        return $this->hasMany(PaymentTransaction::class);
     }
 }

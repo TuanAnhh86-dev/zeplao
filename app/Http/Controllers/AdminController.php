@@ -6,6 +6,7 @@ use App\Models\Event;
 use App\Models\Order;
 use App\Models\TicketType;
 use App\Models\User;
+use App\Services\OrderReservationService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Http\RedirectResponse;
@@ -147,13 +148,14 @@ class AdminController extends Controller
         return view('admin.events.form', ['event' => $event, 'ticketTypes' => $event->ticketTypes()->orderBy('id')->get()]);
     }
 
-    public function update(Request $request, Event $event): RedirectResponse
+    public function update(Request $request, Event $event, OrderReservationService $reservations): RedirectResponse
     {
+        $reservations->expirePendingOrders();
         $data = $this->validatedEvent($request, $event);
         $tickets = $data['ticket_types'];
         unset($data['ticket_types']);
 
-        DB::transaction(function () use ($event, $data, $tickets): void {
+        DB::transaction(function () use ($event, $data, $tickets, $reservations): void {
             $event->update($data);
             $kept = [];
             foreach ($tickets as $ticket) {
@@ -161,7 +163,8 @@ class AdminController extends Controller
                 unset($ticket['id']);
                 if ($id) {
                     $existing = $event->ticketTypes()->lockForUpdate()->findOrFail($id);
-                    abort_if($ticket['quantity'] < $existing->sold, 422, 'Số lượng tồn không thể thấp hơn số vé đã bán.');
+                    $reserved = $reservations->reservedQuantity($existing->id);
+                    abort_if($ticket['quantity'] < $existing->sold + $reserved, 422, 'Số lượng tồn không thể thấp hơn số vé đã bán hoặc đang được giữ.');
                     $existing->update($ticket);
                     $kept[] = $existing->id;
                 } else {
@@ -170,11 +173,12 @@ class AdminController extends Controller
                 }
             }
 
-            $event->ticketTypes()->whereNotIn('id', $kept)->get()->each(function (TicketType $ticket): void {
-                if ($ticket->sold > 0) {
-                    $ticket->update(['quantity' => $ticket->sold]);
+            $event->ticketTypes()->whereNotIn('id', $kept)->get()->each(function (TicketType $ticket) use ($reservations): void {
+                $reserved = $reservations->reservedQuantity($ticket->id);
+                if ($ticket->sold > 0 || $reserved > 0) {
+                    $ticket->update(['quantity' => $ticket->sold + $reserved]);
                 } else {
-                    $ticket->delete();
+            $ticket->delete();
                 }
             });
         });
@@ -182,10 +186,11 @@ class AdminController extends Controller
         return redirect()->route('admin.events')->with('status', 'Đã cập nhật sự kiện và hạng vé.');
     }
 
-    public function destroy(Event $event): RedirectResponse
+    public function destroy(Event $event, OrderReservationService $reservations): RedirectResponse
     {
-        if ($event->ticketTypes->contains(fn (TicketType $ticket) => $ticket->sold > 0)) {
-            return back()->withErrors(['event' => 'Sự kiện có vé đã bán nên không thể xóa.']);
+        $reservations->expirePendingOrders();
+        if ($event->ticketTypes->contains(fn (TicketType $ticket) => $ticket->sold > 0 || $reservations->reservedQuantity($ticket->id) > 0)) {
+            return back()->withErrors(['event' => 'Sự kiện có vé đã bán hoặc đang được giữ nên không thể xóa.']);
         }
 
         $event->delete();
@@ -193,11 +198,12 @@ class AdminController extends Controller
         return redirect()->route('admin.events')->with('status', 'Đã xóa sự kiện.');
     }
 
-    public function orders(Request $request): View
+    public function orders(Request $request, OrderReservationService $reservations): View
     {
+        $reservations->expirePendingOrders();
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:100'],
-            'status' => ['nullable', Rule::in(['pending', 'confirmed', 'refund_pending', 'refunded', 'cancelled'])],
+            'status' => ['nullable', Rule::in(['pending', 'confirmed', 'cancelled'])],
             'from' => ['nullable', 'date_format:Y-m-d'],
             'to' => ['nullable', 'date_format:Y-m-d'],
         ]);
@@ -207,6 +213,8 @@ class AdminController extends Controller
             ->when($filters['q'] ?? null, function ($query, string $term): void {
                 $query->where(function ($query) use ($term): void {
                     $query->where('code', 'like', "%{$term}%")
+                        ->orWhereHas('items', fn ($items) => $items->where('event_title', 'like', "%{$term}%")
+                            ->orWhere('ticket_name', 'like', "%{$term}%"))
                         ->orWhereHas('user', function ($query) use ($term): void {
                             $query->where('name', 'like', "%{$term}%")
                                 ->orWhere('email', 'like', "%{$term}%");
@@ -220,11 +228,17 @@ class AdminController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        return view('admin.orders', compact('orders'));
+        $statusCounts = Order::query()
+            ->selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status');
+
+        return view('admin.orders', compact('orders', 'statusCounts'));
     }
 
-    public function createOrder(): View
+    public function createOrder(OrderReservationService $reservations): View
     {
+        $reservations->expirePendingOrders();
         $events = Event::query()->with('ticketTypes')->orderBy('starts_at')->get();
         $eventOptions = $events->map(fn (Event $event) => [
             'id' => $event->id,
@@ -232,7 +246,7 @@ class AdminController extends Controller
                 'id' => $ticket->id,
                 'name' => $ticket->name,
                 'price' => $ticket->price,
-                'available' => max(0, $ticket->quantity - $ticket->sold),
+                'available' => max(0, $ticket->quantity - $ticket->sold - $reservations->reservedQuantity($ticket->id)),
             ])->values(),
         ])->values();
 
@@ -243,8 +257,9 @@ class AdminController extends Controller
         ]);
     }
 
-    public function storeOrder(Request $request): RedirectResponse
+    public function storeOrder(Request $request, OrderReservationService $reservations): RedirectResponse
     {
+        $reservations->expirePendingOrders();
         $data = $request->validate([
             'user_id' => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'customer')],
             'event_id' => ['required', 'integer', 'exists:events,id'],
@@ -252,7 +267,8 @@ class AdminController extends Controller
             'tickets.*' => ['required', 'integer', 'min:1', 'max:10'],
         ]);
         ksort($data['tickets'], SORT_NUMERIC);
-        $order = DB::transaction(function () use ($data): Order {
+        $order = DB::transaction(function () use ($data, $reservations): Order {
+            $eventTitle = Event::query()->whereKey($data['event_id'])->value('title');
             $tickets = TicketType::query()
                 ->where('event_id', $data['event_id'])
                 ->whereIn('id', array_keys($data['tickets']))
@@ -267,7 +283,7 @@ class AdminController extends Controller
 
             foreach ($data['tickets'] as $ticketId => $quantity) {
                 $ticket = $tickets->get((int) $ticketId);
-                $available = max(0, $ticket->quantity - $ticket->sold);
+                $available = max(0, $ticket->quantity - $ticket->sold - $reservations->reservedQuantity($ticket->id));
                 if ($quantity > $available) {
                     throw \Illuminate\Validation\ValidationException::withMessages(['tickets' => "Hạng vé {$ticket->name} chỉ còn {$available} vé."]);
                 }
@@ -278,6 +294,7 @@ class AdminController extends Controller
                 'user_id' => $data['user_id'],
                 'total' => 0,
                 'status' => 'pending',
+                'expires_at' => now()->addMinutes(OrderReservationService::HOLD_MINUTES),
                 'idempotency_key' => (string) Str::uuid(),
             ]);
             $total = 0;
@@ -288,6 +305,7 @@ class AdminController extends Controller
                 $order->items()->create([
                     'ticket_type_id' => $ticket->id,
                     'ticket_name' => $ticket->name,
+                    'event_title' => $eventTitle,
                     'unit_price' => $ticket->price,
                     'quantity' => $quantity,
                     'subtotal' => $subtotal,
@@ -298,7 +316,7 @@ class AdminController extends Controller
             return $order;
         }, attempts: 3);
 
-        return redirect()->route('admin.orders')->with('status', "Đã tạo đơn {$order->code}; vé chưa được giữ cho đến khi thanh toán hoàn tất.");
+        return redirect()->route('admin.orders')->with('status', "Đã tạo đơn {$order->code}; vé được giữ trong ".OrderReservationService::HOLD_MINUTES.' phút.');
     }
 
     public function customers(Request $request): View
@@ -320,9 +338,11 @@ class AdminController extends Controller
         return view('admin.customers', compact('customers'));
     }
 
-    public function updateOrder(Request $request, Order $order): RedirectResponse
+    public function updateOrder(Request $request, Order $order, OrderReservationService $reservations): RedirectResponse
     {
-        $data = $request->validate(['status' => ['required', Rule::in(['confirmed', 'cancelled', 'refund_pending', 'refunded'])]]);
+        $reservations->expirePendingOrders();
+        $data = $request->validate(['status' => ['required', Rule::in(['confirmed', 'cancelled'])]]);
+
         $newStatus = DB::transaction(function () use ($order, $data): string {
             $locked = Order::query()->lockForUpdate()->findOrFail($order->id);
 
@@ -337,19 +357,6 @@ class AdminController extends Controller
                 $locked->update(['status' => 'confirmed']);
             } elseif ($locked->status === 'pending' && $data['status'] === 'cancelled') {
                 $locked->update(['status' => 'cancelled']);
-            } elseif ($locked->status === 'confirmed' && $data['status'] === 'refund_pending') {
-                $locked->update(['status' => 'refund_pending']);
-            } elseif ($locked->status === 'refund_pending' && $data['status'] === 'refunded') {
-                foreach ($locked->items()->whereNotNull('ticket_type_id')->orderBy('ticket_type_id')->get() as $item) {
-                    $ticket = TicketType::query()->whereKey($item->ticket_type_id)->lockForUpdate()->first();
-                    if ($ticket) {
-                        abort_if($ticket->sold < $item->quantity, 422, 'Ticket inventory does not match this order.');
-                        $ticket->decrement('sold', $item->quantity);
-                    }
-                }
-                $locked->update(['status' => 'refunded']);
-            } elseif ($locked->status === 'refund_pending' && $data['status'] === 'confirmed') {
-                $locked->update(['status' => 'confirmed']);
             } else {
                 abort(422, 'This order cannot transition to the requested status.');
             }
@@ -360,8 +367,6 @@ class AdminController extends Controller
         $message = match ($newStatus) {
             'confirmed' => 'Payment recorded for this order.',
             'cancelled' => 'Unpaid order cancelled.',
-            'refund_pending' => 'Order is waiting for a refund.',
-            'refunded' => 'Refund recorded and tickets returned to inventory.',
         };
 
         return back()->with('status', $message);

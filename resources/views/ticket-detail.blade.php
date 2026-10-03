@@ -49,7 +49,7 @@
                 <div class="flex-1 space-y-2 overflow-y-auto p-4" data-ticket-list>
                     <h2 class="mb-3 px-1 text-sm font-bold uppercase tracking-wide text-neutral-300">H&#7841;ng v&#233; v&#224; gi&#225;</h2>
                     @forelse ($event->ticketTypes->sortBy('price') as $ticketType)
-                        @php($available = max(0, $ticketType->quantity - $ticketType->sold))
+                        @php($available = max(0, $ticketType->quantity - $ticketType->sold - ($reservedQuantities[$ticketType->id] ?? 0)))
                         <article class="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-neutral-800/80 p-3" data-ticket-row data-ticket-id="{{ $ticketType->id }}" data-price="{{ $ticketType->price }}" data-available="{{ $available }}">
                             <div class="min-w-0"><h3 class="font-semibold leading-5">{{ $ticketType->name }}</h3><p class="mt-1 text-sm font-bold text-violet-300">{{ number_format($ticketType->price, 0, ',', '.') }} &#273;</p><p data-stock-label class="mt-1 text-xs {{ $available ? 'text-neutral-400' : 'font-semibold text-rose-300' }}">{{ $available ? 'Còn '.$available.' vé' : 'Hết vé' }}</p></div>
                             <div class="flex shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-neutral-950 p-1">

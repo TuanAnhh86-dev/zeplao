@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Event;
 use App\Models\Order;
 use App\Models\TicketType;
+use App\Services\OrderReservationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +16,7 @@ use Illuminate\Validation\ValidationException;
 
 class OrderController extends Controller
 {
-    public function store(Request $request, Event $event): JsonResponse
+    public function store(Request $request, Event $event, OrderReservationService $reservations): JsonResponse
     {
         $data = $request->validate([
             'tickets' => ['required', 'array', 'min:1'],
@@ -23,8 +24,9 @@ class OrderController extends Controller
             'idempotency_key' => ['required', 'uuid'],
         ]);
         ksort($data['tickets'], SORT_NUMERIC);
+        $reservations->expirePendingOrders();
         try {
-            $order = DB::transaction(function () use ($data, $event, $request): Order {
+            $order = DB::transaction(function () use ($data, $event, $request, $reservations): Order {
             $tickets = TicketType::query()->where('event_id', $event->id)
                 ->whereIn('id', array_keys($data['tickets']))->orderBy('id')->lockForUpdate()->get()->keyBy('id');
             $existing = Order::where('user_id', $request->user()->id)
@@ -40,6 +42,7 @@ class OrderController extends Controller
                 'user_id' => $request->user()->id,
                 'total' => 0,
                 'status' => 'pending',
+                'expires_at' => now()->addMinutes(OrderReservationService::HOLD_MINUTES),
                 'idempotency_key' => $data['idempotency_key'],
             ]);
             $total = 0;
@@ -49,7 +52,7 @@ class OrderController extends Controller
                 if (! $ticket) {
                     throw ValidationException::withMessages(['tickets' => 'Một hạng vé không còn tồn tại. Vui lòng tải lại trang.']);
                 }
-                $available = max(0, $ticket->quantity - $ticket->sold);
+                $available = max(0, $ticket->quantity - $ticket->sold - $reservations->reservedQuantity($ticket->id));
                 if ($quantity > $available) {
                     throw new HttpResponseException(response()->json([
                         'message' => $available > 0 ? "Hạng vé {$ticket->name} chỉ còn {$available} vé." : "Hạng vé {$ticket->name} đã hết vé.",
@@ -61,6 +64,7 @@ class OrderController extends Controller
                 $order->items()->create([
                     'ticket_type_id' => $ticket->id,
                     'ticket_name' => $ticket->name,
+                    'event_title' => $event->title,
                     'unit_price' => $ticket->price,
                     'quantity' => $quantity,
                     'subtotal' => $subtotal,
@@ -93,34 +97,43 @@ class OrderController extends Controller
         ]);
     }
 
-    public function payment(Request $request, Order $order): \Illuminate\View\View
+    public function payment(Request $request, Order $order, OrderReservationService $reservations, \App\Services\VnpayService $vnpay): \Illuminate\View\View
     {
         abort_unless((int) $order->user_id === (int) $request->user()->id || $request->user()->isAdmin(), 403);
+        $reservations->expirePendingOrders();
+        $order->refresh()->load(['items', 'paymentTransactions' => fn ($query) => $query->latest()]);
 
-        return view('payment', compact('order'));
+        return view('payment', [
+            'order' => $order,
+            'vnpayConfigured' => $vnpay->isConfigured(),
+        ]);
+    }
+
+    public function transactions(Request $request): \Illuminate\View\View
+    {
+        $orders = $request->user()->orders()->with('items')->latest()->paginate(15);
+
+        return view('transactions.index', compact('orders'));
+    }
+
+    public function myTickets(Request $request): \Illuminate\View\View
+    {
+        $orders = $request->user()->orders()->with('items')->latest()->paginate(15);
+
+        return view('my-tickets', compact('orders'));
     }
 
     public function cancel(Request $request, Order $order): \Illuminate\Http\RedirectResponse
     {
         abort_unless((int) $order->user_id === (int) $request->user()->id || $request->user()->isAdmin(), 403);
+        abort_unless($order->status === 'pending', 422, 'Only unpaid orders can be cancelled.');
 
-        $newStatus = DB::transaction(function () use ($order): string {
+        DB::transaction(function () use ($order): void {
             $locked = Order::query()->lockForUpdate()->findOrFail($order->id);
-            if ($locked->status === 'pending') {
-                $locked->update(['status' => 'cancelled']);
-            } elseif ($locked->status === 'confirmed') {
-                $locked->update(['status' => 'refund_pending']);
-            } else {
-                abort(422, 'This order cannot be cancelled in its current status.');
-            }
-
-            return $locked->status;
+            abort_unless($locked->status === 'pending', 422, 'Only unpaid orders can be cancelled.');
+            $locked->update(['status' => 'cancelled']);
         });
 
-        $message = $newStatus === 'refund_pending'
-            ? 'Refund requested. The administrator must complete the refund manually until payment integration is available.'
-            : 'Unpaid order cancelled.';
-
-        return redirect()->route('dashboard')->with('status', $message);
+        return redirect()->route('dashboard')->with('status', 'Unpaid order cancelled.');
     }
 }

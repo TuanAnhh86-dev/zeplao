@@ -15,7 +15,7 @@
         </form>
 
         <nav class="ml-auto flex items-center gap-1 sm:gap-3" aria-label="&#272;i&#7873;u h&#432;&#7899;ng ch&#237;nh">
-            <a href="{{ route('dashboard') }}#my-tickets" class="inline-flex h-11 items-center gap-2 rounded-full px-3 text-sm font-semibold text-white transition hover:bg-white/10 hover:text-violet-300 sm:px-4">
+            <a href="{{ route('my-tickets') }}" class="inline-flex h-11 items-center gap-2 rounded-full px-3 text-sm font-semibold text-white transition hover:bg-white/10 hover:text-violet-300 sm:px-4">
                 <svg class="size-5 text-violet-500" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7.5A2.5 2.5 0 0 0 6.5 5h11A2.5 2.5 0 0 0 20 7.5v2a2.5 2.5 0 0 0 0 5v2a2.5 2.5 0 0 0-2.5 2.5h-11A2.5 2.5 0 0 0 4 16.5v-2a2.5 2.5 0 0 0 0-5v-2Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 8v2m0 2v2m0 2v1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
                 <span class="hidden sm:inline">V&#233; c&#7911;a t&#244;i</span>
             </a>
@@ -33,9 +33,10 @@
                         <p class="truncate font-semibold">{{ auth()->user()->name }}</p>
                         <p class="mt-1 truncate text-xs text-neutral-500">{{ auth()->user()->email }}</p>
                     </div>
-                    <a href="{{ route('dashboard') }}#my-tickets" class="mt-1 block rounded-lg px-3 py-2 text-neutral-700 transition hover:bg-violet-50 hover:text-violet-700">V&#233; c&#7911;a t&#244;i</a>
+                    <a href="{{ route('my-tickets') }}" class="mt-1 block rounded-lg px-3 py-2 text-neutral-700 transition hover:bg-violet-50 hover:text-violet-700">V&#233; c&#7911;a t&#244;i</a>
                     @if (auth()->user()->isAdmin())<a href="{{ route('admin.dashboard') }}" class="block rounded-lg px-3 py-2 font-semibold text-violet-700 transition hover:bg-violet-50">Trang quản trị</a>@endif
                     <div class="px-3 py-2 text-xs text-neutral-500">H&#7891; s&#417; c&#225; nh&#226;n</div>
+                    <a href="{{ route('transactions.index') }}" class="block rounded-lg px-3 py-2 text-neutral-700 transition hover:bg-violet-50 hover:text-violet-700">Lịch sử giao dịch</a>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
                         <button type="submit" class="w-full rounded-lg px-3 py-2 text-left font-medium text-neutral-700 transition hover:bg-neutral-100">&#272;&#259;ng xu&#7845;t</button>

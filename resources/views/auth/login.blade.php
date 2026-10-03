@@ -25,7 +25,7 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('login.authenticate') }}" class="mt-[25px]">
+            <form method="POST" action="{{ route('login.authenticate') }}" class="mt-[25px]" data-login-form data-clear-password="{{ $errors->has('email') ? 'true' : 'false' }}">
                 @csrf
 
                 <div>
@@ -54,7 +54,7 @@
                         id="password"
                         name="password"
                         type="password"
-                        autocomplete="current-password"
+                        autocomplete="{{ $errors->has('email') ? 'new-password' : 'current-password' }}"
                         required
                         placeholder="Mật khẩu*"
                         aria-invalid="{{ $errors->has('password') ? 'true' : 'false' }}"
@@ -90,5 +90,20 @@
             </p>
         </section>
     </main>
+    <script>
+        (() => {
+            const form = document.querySelector('[data-login-form]');
+            if (form?.dataset.clearPassword !== 'true') return;
+
+            const clearPassword = () => {
+                const password = form.querySelector('input[name="password"]');
+                if (password) password.value = '';
+            };
+
+            clearPassword();
+            window.addEventListener('pageshow', clearPassword);
+            window.setTimeout(clearPassword, 100);
+        })();
+    </script>
 </body>
 </html>

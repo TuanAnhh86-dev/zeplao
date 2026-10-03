@@ -140,24 +140,6 @@
             @endif
         </section>
 
-        <section id="my-tickets" class="mt-14 border-t border-white/10 pt-8" aria-labelledby="my-tickets-heading">
-            <h2 id="my-tickets-heading" class="text-xl font-semibold sm:text-2xl">V&#233; c&#7911;a t&#244;i</h2>
-            <div class="mt-4 space-y-3">
-                @forelse ($myOrders as $order)
-                    <article class="rounded-2xl border border-white/10 bg-neutral-900 p-5">
-                        <div class="flex flex-wrap items-start justify-between gap-3"><div><p class="font-semibold">{{ $order->code }} <span class="ml-2 rounded-full bg-white/10 px-2 py-1 text-xs">@if ($order->status === 'pending')Ch&#432;a thanh to&#225;n @elseif ($order->status === 'confirmed')&#272;&#227; thanh to&#225;n @elseif ($order->status === 'refund_pending')&#272;ang ch&#7901; ho&#224;n ti&#7873;n @elseif ($order->status === 'refunded')&#272;&#227; ho&#224;n ti&#7873;n @else &#272;&#227; h&#7911;y @endif</span></p><p class="mt-1 text-xs text-neutral-400">{{ $order->created_at->format('d/m/Y H:i') }}</p></div><p class="font-bold text-violet-300">{{ number_format($order->total, 0, ',', '.') }} &#273;</p></div>
-                        <div class="mt-3 space-y-1 text-sm text-neutral-300">@foreach ($order->items as $item)<p>{{ $item->ticket_name }} &times; {{ $item->quantity }}</p>@endforeach</div>
-                        @if ($order->status === 'pending')
-                            <div class="mt-4 flex flex-wrap justify-end gap-2"><a href="{{ route('payment.show', $order) }}" class="rounded-full bg-violet-600 px-4 py-2 text-sm font-semibold hover:bg-violet-500">Ti&#7871;p t&#7909;c thanh to&#225;n</a><form method="POST" action="{{ route('orders.cancel', $order) }}">@csrf<button class="rounded-full border border-rose-400/30 px-4 py-2 text-sm text-rose-200 hover:bg-rose-400/10">H&#7911;y &#273;&#417;n</button></form></div>
-                        @elseif ($order->status === 'confirmed')
-                            <form method="POST" action="{{ route('orders.cancel', $order) }}" class="mt-4 flex justify-end">@csrf<button class="rounded-full border border-rose-400/30 px-4 py-2 text-sm text-rose-200 hover:bg-rose-400/10">H&#7911;y v&#233; v&#224; y&#234;u c&#7847;u ho&#224;n ti&#7873;n</button></form>
-                        @endif
-                    </article>
-                @empty
-                    <div class="rounded-2xl border border-white/10 bg-neutral-900 px-5 py-8 text-sm text-neutral-400">Ch&#432;a c&#243; &#273;&#417;n v&#233; n&#224;o.</div>
-                @endforelse
-            </div>
-        </section>
     </main>
 
     <script>

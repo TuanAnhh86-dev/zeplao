@@ -16,7 +16,8 @@ Tixtak là ứng dụng đặt vé sự kiện được xây dựng bằng Larav
 - Đăng ký bằng mã xác minh email, đăng nhập và đặt lại mật khẩu
 - Xem sự kiện, thông tin địa điểm, sơ đồ và hạng vé
 - Đặt tối đa 10 vé mỗi hạng trong một yêu cầu; hệ thống kiểm tra tồn kho khi ghi nhận đơn
-- Vé được giữ 10 phút cho đơn chờ xác nhận; đơn hết hạn tự nhả vé về kho
+- Vé được giữ 10 phút cho đơn chờ thanh toán; đơn hết hạn tự nhả vé về kho
+- Thanh toán qua VNPay Sandbox; IPN hoặc URL trả về hợp lệ cập nhật đơn, callback được lưu để đối soát
 - Theo dõi đơn vé trên trang tổng quan
 
 ### Quản trị viên
@@ -52,6 +53,8 @@ Cấu hình cơ sở dữ liệu trong `.env`. Mặc định dự án dùng SQLi
 ```powershell
 New-Item -ItemType File -Force database/database.sqlite
 ```
+
+Để thử VNPay Sandbox, điền `VNPAY_TMN_CODE` và `VNPAY_HASH_SECRET` do VNPay cấp vào `.env`, đặt `APP_URL` bằng URL HTTPS ngrok đang hoạt động, rồi chạy `php artisan config:clear`. Đăng ký IPN URL `https://<ngrok-host>/payments/vnpay/ipn` trong cấu hình merchant VNPay. URL trả về được ứng dụng tạo tự động từ `APP_URL`.
 
 Sau đó chạy migration, dữ liệu mẫu và biên dịch giao diện:
 

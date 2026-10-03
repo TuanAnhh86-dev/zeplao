@@ -3,7 +3,9 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\VnpayController;
 use App\Models\Event;
+use App\Services\OrderReservationService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
@@ -37,8 +39,7 @@ Route::get('/dashboard', function () {
 
     $featuredEvents = $events->values();
 
-    $myOrders = Auth::user()->orders()->with('items')->latest()->get();
-    return view('home', compact('events', 'featuredEvents', 'myOrders'));
+    return view('home', compact('events', 'featuredEvents'));
 })->middleware('auth')->name('dashboard');
 
 Route::get('/select-ticket/{event:slug}', function (Event $event) {
@@ -78,8 +79,9 @@ Route::get('/select-ticket/{event:slug}', function (Event $event) {
     return view('select-ticket', compact('event', 'introductionImages', 'seatMapImage'));
 })->middleware('auth')->name('select-ticket');
 
-Route::get('/ticket-detail/{event:slug}', function (Event $event) {
+Route::get('/ticket-detail/{event:slug}', function (Event $event, OrderReservationService $reservations) {
     $event->load('ticketTypes');
+    $reservedQuantities = $reservations->reservedQuantities($event->ticketTypes->pluck('id')->all());
     $mapKeys = [
         'sao-concert-tram-sao-3-26418' => 'sao-concert-tram-3',
         'the-aura-khong-the-thay-the-nov-2026' => 'the-aura',
@@ -95,10 +97,15 @@ Route::get('/ticket-detail/{event:slug}', function (Event $event) {
     ) : null;
     $seatMapImage = $mapFile ? 'images/map/'.$mapFile->getFilename() : null;
 
-    return view('ticket-detail', compact('event', 'seatMapImage'));
+    return view('ticket-detail', compact('event', 'seatMapImage', 'reservedQuantities'));
 })->middleware('auth')->name('ticket-detail');
 Route::post('/events/{event:slug}/orders', [OrderController::class, 'store'])->middleware('auth')->name('orders.store');
 Route::get('/payment/{order}', [OrderController::class, 'payment'])->middleware('auth')->name('payment.show');
+Route::get('/my-ticket', [OrderController::class, 'myTickets'])->middleware('auth')->name('my-tickets');
+Route::get('/transactions', [OrderController::class, 'transactions'])->middleware('auth')->name('transactions.index');
+Route::post('/payment/{order}/vnpay', [VnpayController::class, 'start'])->middleware('auth')->name('payment.vnpay.start');
+Route::get('/payments/vnpay/return', [VnpayController::class, 'returned'])->name('payment.vnpay.return');
+Route::get('/payments/vnpay/ipn', [VnpayController::class, 'ipn'])->name('payment.vnpay.ipn');
 Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->middleware('auth')->name('orders.cancel');
 
 Route::get('/login', [AuthController::class, 'login'])->name('login');
