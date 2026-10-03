@@ -9,6 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('events', function (Blueprint $table): void {
+            $table->dropIndex('events_is_published_index');
             $table->dropColumn('is_published');
         });
     }
@@ -16,7 +17,10 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('events', function (Blueprint $table): void {
-            $table->boolean('is_published')->default(true)->index();
+            $table->boolean('is_published')->default(true);
+        });
+        Schema::table('events', function (Blueprint $table): void {
+            $table->index('is_published');
         });
     }
 };

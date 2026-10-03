@@ -103,7 +103,6 @@ Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->middl
 
 Route::get('/login', [AuthController::class, 'login'])->name('login');
 Route::post('/login', [AuthController::class, 'authenticate'])
-    ->middleware('throttle:5,1')
     ->name('login.authenticate');
 
 Route::middleware('guest')->group(function () {

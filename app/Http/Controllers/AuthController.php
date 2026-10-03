@@ -23,11 +23,21 @@ class AuthController extends Controller
     {
         $guard = Auth::guard('web');
 
-        // Always start a login attempt as a guest, even if an older browser
-        // session is still authenticated or contains a stale intended URL.
-        $guard->logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        // If an already-authenticated browser submits the login form, clear
+        // that identity once. Keep the new guest session stable across retries.
+        if ($guard->check()) {
+            $guard->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
+
+        $attempts = (int) $request->session()->get('login_attempts', 0);
+        if ($attempts >= 10) {
+            return back()
+                ->withErrors(['email' => 'Bạn đã gửi quá 10 yêu cầu đăng nhập trong phiên này. Hãy đăng nhập lại sau khi mở phiên mới.'])
+                ->onlyInput('email');
+        }
+        $request->session()->put('login_attempts', $attempts + 1);
 
         $credentials = $request->validate([
             'email' => ['required', 'email'],
@@ -40,6 +50,7 @@ class AuthController extends Controller
                 ->onlyInput('email');
         }
 
+        $request->session()->forget('login_attempts');
         $request->session()->regenerate();
 
         return redirect()->route($request->user()->isAdmin() ? 'admin.dashboard' : 'dashboard');
