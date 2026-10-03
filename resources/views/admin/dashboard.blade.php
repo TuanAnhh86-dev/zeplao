@@ -18,9 +18,9 @@
             <input type="hidden" name="revenue_chart" value="{{ $revenueChart }}" data-revenue-chart-filter>
             <input type="hidden" name="revenue_metric" value="{{ $revenueMetric }}" data-revenue-metric-filter>
             <label class="text-xs text-neutral-400">Xem theo<select name="revenue_period" data-revenue-period class="mt-1 block rounded-xl border border-white/10 bg-neutral-950 px-4 py-2.5 text-sm text-white"><option value="day" @selected($revenuePeriod === 'day')>Ngày</option><option value="month" @selected($revenuePeriod === 'month')>Tháng</option><option value="year" @selected($revenuePeriod === 'year')>Năm</option></select></label>
-            <label data-revenue-date-field @class(['hidden' => $revenuePeriod !== 'day']) class="text-xs text-neutral-400">Ngày<input type="date" name="revenue_date" value="{{ request('revenue_date', $revenueStart->toDateString()) }}" class="mt-1 block rounded-xl border border-white/10 bg-neutral-950 px-4 py-2.5 text-sm text-white"></label>
-            <label data-revenue-month-field @class(['hidden' => $revenuePeriod !== 'month']) class="text-xs text-neutral-400">Tháng<input type="month" name="revenue_month" value="{{ request('revenue_month', $revenueStart->format('Y-m')) }}" class="mt-1 block rounded-xl border border-white/10 bg-neutral-950 px-4 py-2.5 text-sm text-white"></label>
-            <label data-revenue-year-field @class(['hidden' => $revenuePeriod !== 'year']) class="text-xs text-neutral-400">Năm<input type="number" name="revenue_year" min="2000" max="2100" value="{{ request('revenue_year', $revenueStart->year) }}" class="mt-1 block w-32 rounded-xl border border-white/10 bg-neutral-950 px-4 py-2.5 text-sm text-white"></label>
+            <label data-revenue-date-field @class(['hidden' => $revenuePeriod !== 'day', 'text-xs text-neutral-400'])>Ngày<input type="date" name="revenue_date" value="{{ request('revenue_date', $revenueStart->toDateString()) }}" @disabled($revenuePeriod !== 'day') class="mt-1 block rounded-xl border border-white/10 bg-neutral-950 px-4 py-2.5 text-sm text-white"></label>
+            <label data-revenue-month-field @class(['hidden' => $revenuePeriod !== 'month', 'text-xs text-neutral-400'])>Tháng<input type="month" name="revenue_month" value="{{ request('revenue_month', $revenueStart->format('Y-m')) }}" @disabled($revenuePeriod !== 'month') class="mt-1 block rounded-xl border border-white/10 bg-neutral-950 px-4 py-2.5 text-sm text-white"></label>
+            <label data-revenue-year-field @class(['hidden' => $revenuePeriod !== 'year', 'text-xs text-neutral-400'])>Năm<input type="number" name="revenue_year" min="2000" max="2100" value="{{ request('revenue_year', $revenueStart->year) }}" @disabled($revenuePeriod !== 'year') class="mt-1 block w-32 rounded-xl border border-white/10 bg-neutral-950 px-4 py-2.5 text-sm text-white"></label>
             <button type="submit" class="rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold hover:bg-violet-500">Xem báo cáo</button>
         </form>
         <div class="mb-5 grid gap-3 sm:grid-cols-2"><article class="rounded-xl border border-white/10 bg-black/20 p-4"><p class="text-sm text-neutral-400">Doanh thu kỳ này</p><p class="mt-2 text-2xl font-bold text-violet-300">{{ number_format($selectedRevenue, 0, ',', '.') }} ₫</p><p class="mt-1 text-xs text-neutral-500">{{ $selectedRevenueOrders }} giao dịch đã thanh toán</p></article><article class="rounded-xl border border-white/10 bg-black/20 p-4"><p class="text-sm text-neutral-400">Khoảng thời gian</p><p class="mt-2 text-lg font-bold">{{ $revenueStart->format('d/m/Y') }} – {{ $revenueEnd->format('d/m/Y') }}</p><p class="mt-1 text-xs text-neutral-500">Dữ liệu theo ngày tạo đơn</p></article></div>
@@ -155,7 +155,9 @@
 
                 const updatePeriodFields = () => {
                     Object.entries(periodFields).forEach(([period, field]) => {
-                        field.classList.toggle('hidden', period !== periodSelect.value);
+                        const inactive = period !== periodSelect.value;
+                        field.classList.toggle('hidden', inactive);
+                        field.querySelector('input').disabled = inactive;
                     });
                 };
 

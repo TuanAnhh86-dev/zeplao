@@ -10,7 +10,7 @@
     @include('partials.site-header')
     <main class="mx-auto max-w-5xl px-4 py-10 sm:px-6">
         <a href="{{ route('dashboard') }}" class="text-sm font-semibold text-violet-300 hover:text-violet-200">← Quay lại sự kiện</a>
-        <div class="mb-7 mt-4"><p class="text-xs font-semibold uppercase tracking-[.18em] text-violet-300">Tài khoản</p><h1 class="mt-2 text-3xl font-bold">Lịch sử giao dịch</h1><p class="mt-2 text-sm text-neutral-400">Theo dõi vé đã đặt, thanh toán và đơn đã hủy.</p></div>
+        <div class="mb-7 mt-4"><h1 class="text-3xl font-bold">Lịch sử giao dịch</h1><p class="mt-2 text-sm text-neutral-400">Theo dõi vé đã đặt, thanh toán và đơn đã hủy.</p></div>
 
         <div class="space-y-3">
             @forelse ($orders as $order)

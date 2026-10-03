@@ -37,4 +37,23 @@ class OrderReservationService
             ->where('orders.expires_at', '>', now())
             ->sum('order_items.quantity');
     }
+
+    /** @return array<int, int> Ticket type ID => quantity held by active orders. */
+    public function reservedQuantities(array $ticketTypeIds): array
+    {
+        if ($ticketTypeIds === []) {
+            return [];
+        }
+
+        return DB::table('order_items')
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->whereIn('order_items.ticket_type_id', $ticketTypeIds)
+            ->where('orders.status', 'pending')
+            ->where('orders.expires_at', '>', now())
+            ->groupBy('order_items.ticket_type_id')
+            ->selectRaw('order_items.ticket_type_id, SUM(order_items.quantity) as quantity')
+            ->pluck('quantity', 'ticket_type_id')
+            ->map(fn ($quantity) => (int) $quantity)
+            ->all();
+    }
 }

@@ -118,7 +118,11 @@ class OrderController extends Controller
 
     public function myTickets(Request $request): \Illuminate\View\View
     {
-        $orders = $request->user()->orders()->with('items')->latest()->paginate(15);
+        $orders = $request->user()->orders()
+            ->where('status', 'confirmed')
+            ->with('items.ticketType.event')
+            ->latest()
+            ->paginate(15);
 
         return view('my-tickets', compact('orders'));
     }
