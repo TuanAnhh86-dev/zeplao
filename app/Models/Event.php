@@ -18,14 +18,12 @@ class Event extends Model
         'cover_image',
         'introduction',
         'ticket_url',
-        'is_published',
     ];
 
     protected function casts(): array
     {
         return [
             'starts_at' => 'datetime',
-            'is_published' => 'boolean',
         ];
     }
 

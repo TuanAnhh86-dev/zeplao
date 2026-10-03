@@ -42,7 +42,7 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->route('dashboard');
+        return redirect()->route($request->user()->isAdmin() ? 'admin.dashboard' : 'dashboard');
     }
 
     public function forgotPassword(Request $request): View

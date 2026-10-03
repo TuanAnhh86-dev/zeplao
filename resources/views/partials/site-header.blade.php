@@ -10,7 +10,7 @@
                 <circle cx="10.8" cy="10.8" r="6.8" stroke="currentColor" stroke-width="2.2" />
                 <path d="m16 16 4.2 4.2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
             </svg>
-            <input id="event-search" name="q" type="search" placeholder="B&#7841;n t&#236;m s&#7921; ki&#7879;n n&#224;o h&#244;m nay?" class="h-full min-w-0 flex-1 border-0 bg-transparent px-4 text-sm text-white outline-none placeholder:text-neutral-400 focus:ring-0" data-event-search>
+            <input id="event-search" name="q" type="search" autocomplete="off" spellcheck="false" placeholder="B&#7841;n t&#236;m s&#7921; ki&#7879;n n&#224;o h&#244;m nay?" class="search-input h-full min-w-0 flex-1 border-0 bg-transparent px-4 text-sm text-white outline-none placeholder:text-neutral-400 focus:ring-0" data-event-search>
             <button type="submit" class="h-full shrink-0 border-l border-white/10 px-5 text-sm font-semibold transition hover:bg-violet-600">T&#236;m ki&#7871;m</button>
         </form>
 
@@ -34,6 +34,7 @@
                         <p class="mt-1 truncate text-xs text-neutral-500">{{ auth()->user()->email }}</p>
                     </div>
                     <a href="{{ route('dashboard') }}#my-tickets" class="mt-1 block rounded-lg px-3 py-2 text-neutral-700 transition hover:bg-violet-50 hover:text-violet-700">V&#233; c&#7911;a t&#244;i</a>
+                    @if (auth()->user()->isAdmin())<a href="{{ route('admin.dashboard') }}" class="block rounded-lg px-3 py-2 font-semibold text-violet-700 transition hover:bg-violet-50">Trang quản trị</a>@endif
                     <div class="px-3 py-2 text-xs text-neutral-500">H&#7891; s&#417; c&#225; nh&#226;n</div>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf

@@ -9,14 +9,14 @@ class DemoUsersSeeder extends Seeder
 {
     public function run(): void
     {
-        User::firstOrCreate(
+        User::updateOrCreate(
             ['email' => 'admin@gmail.com'],
-            ['name' => 'Admin', 'password' => '123456'],
+            ['name' => 'Admin', 'password' => '123456', 'role' => 'admin'],
         );
 
-        User::firstOrCreate(
+        User::updateOrCreate(
             ['email' => 'vuongcongtuan2005@gmail.com'],
-            ['name' => 'Vuong Cong Tuan', 'password' => '123456'],
+            ['name' => 'Vuong Cong Tuan', 'password' => '123456', 'role' => 'customer'],
         );
     }
 }

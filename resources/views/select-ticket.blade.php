@@ -19,8 +19,8 @@
                 <div>
                     <h1 id="event-title" class="text-lg font-bold leading-tight sm:text-xl">{{ $event->title }}</h1>
                     <div class="mt-5 space-y-3 text-sm font-semibold text-violet-300">
-                        <p class="flex items-start gap-3"><span class="text-white" aria-hidden="true">&#9632;</span><span>{{ $event->starts_at->format('H:i, d/m/Y') }}</span></p>
-                        <p class="flex items-start gap-3"><span class="text-white" aria-hidden="true">&#9679;</span><span>{{ $event->venue }}<span class="block pt-1 text-sm font-medium text-neutral-300">{{ $event->city }}</span></span></p>
+                        <p class="flex items-start gap-3"><svg class="mt-0.5 size-4 shrink-0 text-white" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="5" width="17" height="16" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M7.5 3v4M16.5 3v4M3.5 9h17" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>{{ $event->starts_at->format('H:i, d/m/Y') }}</span></p>
+                        <p class="flex items-start gap-3"><svg class="mt-0.5 size-4 shrink-0 text-white" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.2" stroke="currentColor" stroke-width="1.7"/></svg><span>{{ $event->venue }}<span class="block pt-1 text-sm font-medium text-neutral-300">{{ $event->city }}</span></span></p>
                     </div>
                 </div>
                 <div class="mt-6 border-t border-white/50 pt-3">

@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Event;
+use App\Models\OrderItem;
 use Illuminate\Database\Seeder;
 
 class EventSeeder extends Seeder
@@ -91,7 +92,7 @@ class EventSeeder extends Seeder
                 'title' => '[Metashow] Triển Lãm Nghệ Thuật Ánh Sáng',
                 'slug' => 'meta-show-trien-lam-nghe-thuat-anh-sang-24924',
                 'category' => 'experience', 'city' => html_entity_decode('TP. H&#7891; Ch&#237; Minh', ENT_QUOTES | ENT_HTML5, 'UTF-8'), 'city_key' => 'hcm',
-                'venue' => html_entity_decode('L&#7847;u 4, Thiso Mall Sala', ENT_QUOTES | ENT_HTML5, 'UTF-8'), 'starts_at' => '2026-10-02 10:00:00',
+                'venue' => html_entity_decode('L&#7847;u 4, Thiso Mall Sala', ENT_QUOTES | ENT_HTML5, 'UTF-8'), 'starts_at' => '2027-01-20 10:00:00',
                 'cover_image' => 'images/events/meta-show-trien-lam-nghe-thuat-anh-sang.jpg',
                 'introduction' => html_entity_decode('METASHOW l&#224; tri&#7875;n l&#227;m ngh&#7879; thu&#7853;t &#225;nh s&#225;ng t&#7841;i L9-L10, t&#7847;ng 4 Thiso Mall Sala, s&#7889; 10 Mai Ch&#237; Th&#7885;, ph&#432;&#7901;ng An Kh&#225;nh, TP. H&#7891; Ch&#237; Minh. Kh&#244;ng gian k&#7871;t h&#7907;p ngh&#7879; thu&#7853;t th&#7883; gi&#225;c v&#7899;i &#225;nh s&#225;ng v&#224; c&#244;ng ngh&#7879;, m&#7901;i kh&#225;ch tham quan b&#432;&#7899;c qua nhi&#7873;u khu v&#7921;c tr&#7843;i nghi&#7879;m c&#243; ch&#7911; &#273;&#7873; ri&#234;ng.&#10;&#10;Tri&#7875;n l&#227;m m&#7903; c&#7917;a h&#224;ng ng&#224;y t&#7915; 10:00 &#273;&#7871;n 22:00; l&#432;&#7907;t check-in cu&#7889;i l&#250;c 21:15. Ticketbox hi&#7875;n th&#7883; v&#233; t&#7915; 150.000 &#273;&#7891;ng. Trang s&#7921; ki&#7879;n li&#7879;t k&#234; c&#225;c l&#7883;ch tham quan trong th&#225;ng 10 v&#224; th&#225;ng 11 n&#259;m 2026; ng&#224;y v&#224; t&#236;nh tr&#7841;ng v&#233; c&#243; th&#7875; thay &#273;&#7893;i theo l&#7883;ch c&#7911;a ban t&#7893; ch&#7913;c.', ENT_QUOTES | ENT_HTML5, 'UTF-8'),
                 'ticket_types' => [['name' => html_entity_decode('V&#233; tham quan', ENT_QUOTES | ENT_HTML5, 'UTF-8'), 'price' => 150000]],
@@ -216,11 +217,21 @@ class EventSeeder extends Seeder
             $event->update(['ticket_url' => $ticketUrl]);
 
             $ticketNames = array_column($ticketTypes, 'name');
-            $event->ticketTypes()->whereNotIn('name', $ticketNames)->delete();
+            $referencedTicketIds = OrderItem::query()->whereNotNull('ticket_type_id')->select('ticket_type_id');
+            $event->ticketTypes()
+                ->whereNotIn('name', $ticketNames)
+                ->where('sold', 0)
+                ->whereNotIn('id', $referencedTicketIds)
+                ->delete();
 
             foreach ($ticketTypes as $ticketType) {
-                $ticketData = array_merge($ticketType, ['quantity' => 0, 'sold' => 0]);
-                $event->ticketTypes()->updateOrCreate(['name' => $ticketData['name']], $ticketData);
+                $ticket = $event->ticketTypes()->firstOrNew(['name' => $ticketType['name']]);
+                $ticket->price = $ticketType['price'];
+                if (! $ticket->exists) {
+                    $ticket->quantity = 10;
+                    $ticket->sold = 0;
+                }
+                $ticket->save();
             }
         }
     }

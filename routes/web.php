@@ -1,31 +1,47 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AdminController;
+use App\Http\Controllers\OrderController;
 use App\Models\Event;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return Auth::check() ? redirect()->route('dashboard') : redirect()->route('login');
+    if (! Auth::check()) return redirect()->route('login');
+    return redirect()->route(Auth::user()->isAdmin() ? 'admin.dashboard' : 'dashboard');
+});
+
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/', [AdminController::class, 'index'])->name('dashboard');
+    Route::get('/events', [AdminController::class, 'events'])->name('events');
+    Route::get('/events/create', [AdminController::class, 'create'])->name('events.create');
+    Route::post('/events', [AdminController::class, 'store'])->name('events.store');
+    Route::get('/events/{event}/edit', [AdminController::class, 'edit'])->name('events.edit');
+    Route::put('/events/{event}', [AdminController::class, 'update'])->name('events.update');
+    Route::delete('/events/{event}', [AdminController::class, 'destroy'])->name('events.destroy');
+    Route::get('/orders', [AdminController::class, 'orders'])->name('orders');
+    Route::get('/orders/create', [AdminController::class, 'createOrder'])->name('orders.create');
+    Route::post('/orders', [AdminController::class, 'storeOrder'])->name('orders.store');
+    Route::patch('/orders/{order}', [AdminController::class, 'updateOrder'])->name('orders.update');
+    Route::get('/customers', [AdminController::class, 'customers'])->name('customers');
 });
 
 Route::get('/dashboard', function () {
+    if (Auth::user()->isAdmin()) return redirect()->route('admin.dashboard');
     $events = Event::query()
-        ->where('is_published', true)
-        ->where('starts_at', '>=', now())
         ->with('ticketTypes')
         ->orderBy('starts_at')
         ->get();
 
     $featuredEvents = $events->values();
 
-    return view('home', compact('events', 'featuredEvents'));
+    $myOrders = Auth::user()->orders()->with('items')->latest()->get();
+    return view('home', compact('events', 'featuredEvents', 'myOrders'));
 })->middleware('auth')->name('dashboard');
 
 Route::get('/select-ticket/{event:slug}', function (Event $event) {
-    abort_unless($event->is_published, 404);
-
     $event->load('ticketTypes');
     $introductionImages = collect(File::files(public_path('images/events')))
         ->filter(function ($file) use ($event) {
@@ -63,7 +79,6 @@ Route::get('/select-ticket/{event:slug}', function (Event $event) {
 })->middleware('auth')->name('select-ticket');
 
 Route::get('/ticket-detail/{event:slug}', function (Event $event) {
-    abort_unless($event->is_published, 404);
     $event->load('ticketTypes');
     $mapKeys = [
         'sao-concert-tram-sao-3-26418' => 'sao-concert-tram-3',
@@ -82,9 +97,14 @@ Route::get('/ticket-detail/{event:slug}', function (Event $event) {
 
     return view('ticket-detail', compact('event', 'seatMapImage'));
 })->middleware('auth')->name('ticket-detail');
+Route::post('/events/{event:slug}/orders', [OrderController::class, 'store'])->middleware('auth')->name('orders.store');
+Route::get('/payment/{order}', [OrderController::class, 'payment'])->middleware('auth')->name('payment.show');
+Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->middleware('auth')->name('orders.cancel');
 
 Route::get('/login', [AuthController::class, 'login'])->name('login');
-Route::post('/login', [AuthController::class, 'authenticate'])->name('login.authenticate');
+Route::post('/login', [AuthController::class, 'authenticate'])
+    ->middleware('throttle:5,1')
+    ->name('login.authenticate');
 
 Route::middleware('guest')->group(function () {
     Route::get('/register', [AuthController::class, 'register'])->name('register');

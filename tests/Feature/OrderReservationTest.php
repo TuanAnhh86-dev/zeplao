@@ -1,0 +1,171 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Event;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\TicketType;
+use App\Models\User;
+use Database\Seeders\EventSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
+use Illuminate\Support\Str;
+use Tests\TestCase;
+
+class OrderReservationTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+    }
+
+    public function test_pending_order_reserves_stock_and_retries_are_idempotent(): void
+    {
+        [$event, $ticket] = $this->eventWithTicket(1);
+        $user = User::factory()->create();
+        $key = (string) Str::uuid();
+
+        $first = $this->actingAs($user)->postJson(route('orders.store', $event), [
+            'tickets' => [$ticket->id => 1], 'idempotency_key' => $key,
+        ])->assertOk();
+        $this->assertSame('Đã giữ vé trong 10 phút. Đơn đang chờ xác nhận.', $first->json('message'));
+        $order = Order::where('code', $first->json('code'))->firstOrFail();
+        $this->assertSame(600, $order->expires_at->timestamp - $order->created_at->timestamp);
+
+        $retry = $this->postJson(route('orders.store', $event), [
+            'tickets' => [$ticket->id => 1], 'idempotency_key' => $key,
+        ])->assertOk();
+        $this->assertSame($first->json('code'), $retry->json('code'));
+
+        $this->postJson(route('orders.store', $event), [
+            'tickets' => [$ticket->id => 1], 'idempotency_key' => (string) Str::uuid(),
+        ])->assertStatus(409);
+        $this->assertSame(0, $ticket->fresh()->sold);
+        $this->assertSame(1, Order::where('status', 'pending')->count());
+    }
+
+    public function test_expired_hold_is_released_and_cannot_be_confirmed(): void
+    {
+        [$event, $ticket] = $this->eventWithTicket(1);
+        $user = User::factory()->create();
+        $response = $this->actingAs($user)->postJson(route('orders.store', $event), [
+            'tickets' => [$ticket->id => 1], 'idempotency_key' => (string) Str::uuid(),
+        ])->assertOk();
+        $order = Order::where('code', $response->json('code'))->firstOrFail();
+
+        $this->travel(11)->minutes();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin)->patch(route('admin.orders.update', $order), ['status' => 'confirmed'])
+            ->assertSessionHasErrors(['order']);
+
+        $this->postJson(route('orders.store', $event), [
+            'tickets' => [$ticket->id => 1], 'idempotency_key' => (string) Str::uuid(),
+        ])->assertOk();
+
+        $this->assertSame('cancelled', $order->fresh()->status);
+        $this->assertSame(0, $ticket->fresh()->sold);
+    }
+
+    public function test_confirmation_converts_hold_to_sold_once_and_cancellation_releases_hold(): void
+    {
+        [$event, $ticket] = $this->eventWithTicket(2);
+        $user = User::factory()->create();
+        $orders = [];
+        foreach (range(1, 2) as $index) {
+            $response = $this->actingAs($user)->postJson(route('orders.store', $event), [
+                'tickets' => [$ticket->id => 1], 'idempotency_key' => (string) Str::uuid(),
+            ])->assertOk();
+            $orders[] = Order::where('code', $response->json('code'))->firstOrFail();
+        }
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin)->patch(route('admin.orders.update', $orders[0]), ['status' => 'confirmed'])->assertSessionHasNoErrors();
+        $this->assertSame(1, $ticket->fresh()->sold);
+        $this->patch(route('admin.orders.update', $orders[1]), ['status' => 'cancelled'])->assertSessionHasNoErrors();
+        $this->assertSame(1, $ticket->fresh()->sold);
+        $this->assertSame('cancelled', $orders[1]->fresh()->status);
+        $this->postJson(route('orders.store', $event), [
+            'tickets' => [$ticket->id => 1], 'idempotency_key' => (string) Str::uuid(),
+        ])->assertOk();
+    }
+
+    public function test_admin_cannot_reduce_capacity_below_active_holds(): void
+    {
+        [$event, $ticket] = $this->eventWithTicket(1);
+        $customer = User::factory()->create();
+        $this->actingAs($customer)->postJson(route('orders.store', $event), [
+            'tickets' => [$ticket->id => 1], 'idempotency_key' => (string) Str::uuid(),
+        ])->assertOk();
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $payload = [
+            'title' => $event->title, 'slug' => $event->slug, 'category' => $event->category,
+            'city' => $event->city, 'city_key' => $event->city_key, 'venue' => $event->venue,
+            'starts_at' => $event->starts_at->format('Y-m-d H:i:s'), 'cover_image' => $event->cover_image,
+            'ticket_types' => [['id' => $ticket->id, 'name' => $ticket->name, 'price' => $ticket->price, 'quantity' => 0]],
+        ];
+
+        $this->actingAs($admin)->put(route('admin.events.update', $event), $payload)->assertStatus(422);
+        $this->assertSame(1, $ticket->fresh()->quantity);
+
+        $payload['ticket_types'] = [['name' => 'Extra', 'price' => 200, 'quantity' => 3]];
+        $this->put(route('admin.events.update', $event), $payload)->assertRedirect(route('admin.events'));
+        $this->assertDatabaseHas('ticket_types', ['id' => $ticket->id, 'quantity' => 1]);
+    }
+
+    public function test_ticket_detail_displays_available_stock_after_active_holds(): void
+    {
+        [$event, $ticket] = $this->eventWithTicket(1);
+        $customer = User::factory()->create();
+        $this->actingAs($customer)->postJson(route('orders.store', $event), [
+            'tickets' => [$ticket->id => 1], 'idempotency_key' => (string) Str::uuid(),
+        ])->assertOk();
+
+        $this->withoutVite()->get(route('ticket-detail', $event))
+            ->assertOk()->assertSee('data-available="0"', false);
+    }
+
+    public function test_event_seeder_initializes_stock_to_ten_and_preserves_existing_stock_and_order_history(): void
+    {
+        (new EventSeeder())->run();
+        $this->assertGreaterThan(0, TicketType::count());
+        $this->assertSame(0, TicketType::where('quantity', '!=', 10)->count());
+
+        $ticket = TicketType::firstOrFail();
+        $ticket->update(['quantity' => 23, 'sold' => 5]);
+        $obsolete = $ticket->event->ticketTypes()->create([
+            'name' => 'Legacy ticket', 'price' => 100, 'quantity' => 10, 'sold' => 0,
+        ]);
+        $user = User::factory()->create();
+        $order = Order::create([
+            'code' => 'TX-LEGACY01', 'user_id' => $user->id, 'total' => 100,
+            'status' => 'confirmed',
+        ]);
+        $order->items()->create([
+            'ticket_type_id' => $obsolete->id, 'ticket_name' => $obsolete->name,
+            'unit_price' => 100, 'quantity' => 1, 'subtotal' => 100,
+        ]);
+
+        (new EventSeeder())->run();
+
+        $this->assertSame(23, $ticket->fresh()->quantity);
+        $this->assertSame(5, $ticket->fresh()->sold);
+        $this->assertDatabaseHas('ticket_types', ['id' => $obsolete->id]);
+        $this->assertDatabaseHas('order_items', ['ticket_type_id' => $obsolete->id]);
+    }
+
+    private function eventWithTicket(int $quantity): array
+    {
+        $event = Event::create([
+            'title' => 'Test event', 'slug' => 'test-event', 'category' => 'music',
+            'city' => 'Hanoi', 'city_key' => 'hanoi', 'venue' => 'Test venue',
+            'starts_at' => now()->addDay(), 'cover_image' => 'test.jpg',
+        ]);
+        $ticket = $event->ticketTypes()->create(['name' => 'General', 'price' => 100, 'quantity' => $quantity, 'sold' => 0]);
+        return [$event, $ticket];
+    }
+}
